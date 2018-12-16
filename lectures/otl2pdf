@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Args: a list of otl files
+# Output: pdf file
+
+for f in "$@"; do
+  f=${f/\.otl/}
+  `dirname $0`/otl2tex $f.otl || exit 1
+  pdflatex $f.tex || exit 1
+  if grep "bibliography{" $f.tex; then
+    bibtex $f || exit 1
+  fi
+  if grep 'Rerun' $f.log; then
+    pdflatex $f.tex || exit 1
+  fi
+  if grep 'Rerun' $f.log; then
+    pdflatex $f.tex || exit 1
+  fi
+  rm -f $f.{log,aux,tex,out}
+done

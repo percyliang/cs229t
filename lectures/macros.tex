@@ -1,0 +1,42 @@
+\newcommand\red[1]{\textcolor{red}{#1}}
+\newcommand\blue[1]{\textcolor{blue}{#1}}
+\newcommand\green[1]{\textcolor[rgb]{0,0.7,0}{#1}}
+
+\newcommand\word[1]{\red{\bf #1}}
+\newcommand\thm[1]{\blue{\bf #1}}
+
+\newcommand\lecture[1]{\newpage \def\currlecturenum{#1} \begin{equation} \tag{#1}\label{lec:#1} \hypertarget{lecture#1}{\text{\green{\large \bf [begin lecture #1]}}} \end{equation}}
+\newcommand\currlecture{(Lecture \currlecturenum)}
+
+\newcommand\reflecture[1]{Lecture~\ref{lec:#1}}
+\newcommand\reflectureNoLink[1]{Lecture~#1}
+
+\newcommand\lemmaHeading[2]{\begin{lemma}[#2] \label{lem:#1} \end{lemma}}
+\newcommand\theoremHeading[2]{\begin{theorem}[#2] \label{thm:#1} \end{theorem}}
+\newcommand\corollaryHeading[2]{\begin{corollary}[#2] \label{cor:#1} \end{corollary}}
+\newcommand\algHeading[2]{\begin{alg}[#2] \label{alg:#1} \end{alg}}
+\newcommand\exampleHeading[2]{\begin{example}[#2] \label{ex:#1} \end{example}}
+\newcommand\definitionHeading[2]{\begin{definition}[#2] \label{def:#1} \end{definition}}
+\newcommand\assumptionHeading[2]{\begin{assumption}[#2] \label{ass:#1} \end{assumption}}
+
+\newcommand\Regret{\text{Regret}}
+\newcommand\SomeFunction{\text{SomeFunction}}
+\newcommand\Complexity{\text{Complexity}}
+
+\newcommand\hERM{\hat h_\text{ERM}}
+\newcommand\W{\mathbb{W}}
+\newcommand\VC{\text{VC}}
+\newcommand\Lower{\text{Lower}}
+\newcommand\Upper{\text{Upper}}
+\newcommand\Approx{\text{Approx}}
+\newcommand\lgen{\ell_\text{gen}}
+\newcommand\ldis{\ell_\text{dis}}
+
+\newcommand\ferm{\hat f_\text{ERM}}
+\newcommand\fsgd{\hat f_\text{SGD}}
+\newcommand\polydeg{\text{deg}}
+\newcommand\bbC{\mathbb C}
+\newcommand\bbN{\mathbb N}
+
+\newcommand\Uball{U_{\le 1}}
+\newcommand\Usphere{U_{1}}

@@ -1,0 +1,386 @@
+#!/usr/bin/ruby
+
+# Converts an outline file (otl) into a latex file.
+# Input: <file.otl>
+# Output: <file.tex>
+
+# Format of an OTL file:
+# !format TSI
+# !documentclass[12pt]{article}
+# !preamble \usepackage{mystyle}
+# !include- macros.otl (- means don't include again if already included)
+# !verbatim: include stuff directly in latex without wrapping in outline
+# !escape: for typing text.  Certain characters get escaped automatically like quotes and underscores.
+# !comment: always hide.
+# !preliminary: mark the subtree as preliminary.
+# !showPreliminary: show preliminary subtrees.
+# !ruby: execute these Ruby commands.
+# $filePrefix is the prefix of the otl file.
+
+ContinuePattern = /^ / # Continuation of line
+DefaultStyleSpec = "TSI"
+
+def indent(i) "  " * (i > 0 ? i : 0) end
+def blank(s) s.gsub(/./, " ") end
+def escape(s, startInMath) # return s, inMath
+  inMath = []
+  # Don't escape anything in math mode (stuff between \[,\] or $,$)
+  t = (0...s.size).map { |i| s[i..i] }
+  t.each_index { |i|
+    prevInMath = (i == 0 ? startInMath : inMath[i-1])
+    next if inMath[i] != nil
+    if t[i] == "\\" && t[i+1] == "[" then
+      inMath[i] = inMath[i+1] = true
+    elsif t[i] == "\\" && t[i+1] == "]" then
+      inMath[i] = inMath[i+1] = false
+    elsif t[i] == "$" then
+      inMath[i] = (not prevInMath)
+    else # Continue on
+      inMath[i] = prevInMath
+    end
+  }
+  inQuote = false
+  t.each_index { |i|
+    next if inMath[i]
+    # Turn " into `` and ''
+    if t[i] == "\"" then
+      t[i] = inQuote ? "''" : "``"
+      inQuote = (not inQuote)
+    end
+    t[i] = "$"+t[i]+"$" if ["|", "<", ">"].member?(t[i]) # Escape symbols which are not in math
+    t[i] = "\\"+t[i] if ["_", "%"].member?(t[i])
+  }
+  return t.join(""), inMath.last
+end
+
+class Style
+  attr_accessor :id, :before, :after, :begin, :end
+  def initialize(*strs)
+    @id     = strs[0]
+    @before = strs[1]
+    @after  = strs[2]
+    @begin  = strs[3]
+    @end    = strs[4]
+  end
+end
+
+class StyleDB
+  def initialize
+    @map = {}
+    [ Style.new("N" , "", "\n\n"),
+      Style.new("T1" , "\\begin{center} \\Large ", " \\end{center}"),
+      Style.new("T2" , "\\begin{center} ", " \\end{center}"),
+      Style.new("R" , "\\newpage \\begin{center} \\Large ", " \\end{center}"),
+      Style.new("S1", "\\section{",        "}"),
+      Style.new("S2", "\\subsection{",     "}"),
+      Style.new("S3", "\\subsubsection{",  "}"),
+      Style.new("s1", "\\section*{",       "}"),
+      Style.new("s2", "\\subsection*{",    "}"),
+      Style.new("s3", "\\subsubsection*{", "}"),
+      Style.new("P" , "\\paragraph{",      "}"),
+      Style.new("I" , "\\item ", "", "\\begin{itemize}", "\\end{itemize}"),
+      Style.new("E" , "\\item ", "", "\\begin{enumerate}", "\\end{enumerate}")
+    ].each { |style|
+      @map[style.id] = style
+    }
+  end
+
+  def get(id)
+    @map[id] || raise("Invalid ID: #{id}")
+  end
+end
+Styles = StyleDB.new
+
+# A list of styles
+class StyleList
+  def initialize(str)
+    @styles = []
+    n = 0
+    str.each_byte { |c| c = c.chr
+      if c =~ /[SsT]/ then
+        n += 1
+        c += n.to_s
+      end
+      @styles << Styles.get(c)
+    }
+  end
+  def get(i) @styles[[i, @styles.size-1].min] end
+  def update(indent, s)
+    styles = @styles[0...indent] + [@styles.last] * [indent-@styles.size, 0].max
+    StyleList.new(styles.map { |style| style.id[0..0] }.join("") + s)
+  end
+  def to_s; @styles.map { |style| style.id[0..0] }.join("") end
+end
+
+############################################################
+
+class Node
+  attr_reader :value, :children, :source
+  def initialize(value, source)
+    @value = value
+    @source = source
+    @children = []
+  end
+  def addChild(childNode); @children.push(childNode) end
+  def removeFirstChild; @children.shift end
+  def removeLastChild; @children.pop end
+  def firstChild; @children.first end
+  def lastChild; @children.last end
+end
+
+# Return a list of nodes
+# Each node is ["value", [children]]
+def readForest(inFile)
+  oldIndent = 0
+
+  lineNum = 0
+  getSource = lambda {inFile+":"+lineNum.to_s}
+
+  rootNode = Node.new(nil, getSource.call)
+  path = [rootNode] # Path to current node
+
+  IO.foreach(inFile) { |s|
+    lineNum += 1
+    s = s.rstrip
+    next if s == ""
+    t = s.gsub(/\t/, "")
+    currIndent = s.size - t.size
+
+    (oldIndent+1).upto(currIndent) { |i|
+      node = path.last
+      node.addChild(Node.new(nil, getSource.call)) unless node.children.size > 0
+      path.push(node.lastChild) # Indent one level
+    }
+    (oldIndent-1).downto(currIndent) { |i|
+      path.pop
+    }
+    path.last.addChild(Node.new(t, getSource.call))
+    oldIndent = currIndent
+  }
+  rootNode.children # Return nodes
+end
+
+def getFreeFile(prefix, suffix)
+  i = 0
+  while true
+    f = "#{prefix}#{i}#{suffix}"
+    return f unless File.exists? f
+    i += 1
+  end
+end
+
+def evalRuby(lines, verbose)
+  #lines.each { |line| puts line }
+  begin
+    #puts "EVAL at #{$0}"
+    #puts "CURRDIR " + `pwd`
+    #puts "LOAD " + $LOAD_PATH.inspect
+    puts if verbose
+    puts "EVAL " + lines.inspect if verbose
+    x = eval lines.join("\n")
+    x = [""] if x == nil || x == true
+    puts "RESULT " + x.inspect if verbose
+    x
+  rescue SyntaxError => e
+    ["Execution failed:", "\\begin{verbatim}"] + lines + e.message.split("\n") + ["\\end{verbatim}"]
+  end
+end
+
+def flatten(nodes)
+  nodes.map { |node|
+    [node.value]+flatten(node.children)
+  }.flatten.compact
+end
+
+$showPreliminary = false
+
+def writeForest(out, forest, currIndent, styleList, includedFiles, escapeStuff)
+  began = false
+  restoreStyleList = nil # If go into a temporary style, restore to this right after
+  tmpDone = false # Whether we're done printing stuff in a temporary style and ready to switch back
+
+  finishStyle = lambda {
+    if began
+      style = styleList.get(currIndent)
+      #puts "GOT style #{style.id}"
+      out.puts indent(currIndent) + style.end if style.end
+    end
+    began = false
+  }
+  inMath = false
+
+  forest.each_index { |i|
+    node, nextNode = forest[i], forest[i+1]
+    value = node.value
+    
+    # Render URLs specially
+    # If we have:
+    # <title>
+    #   http://...
+    # then fold the URL into the <title> as a link
+    subnode = node.firstChild
+    if subnode && subnode.value =~ /^(ftp|http|https):\/\/.+$/
+      value = "\\href{#{subnode.value}}{#{value}}"
+      node.removeFirstChild
+    end
+
+    # Source a file.
+    if value =~ /^!(include|INCLUDE)(-?)\s+(.+)/ then
+      out.puts "% " + value
+      $3.split.each { |f|
+        next if $2 && includedFiles.has_key?(f) # Skip if already included
+        includedFiles[f] = true
+        if f =~ /\.otl$/ then
+          styleList, escapeStuff = writeForest(out, readForest(f), currIndent, styleList, includedFiles, escapeStuff)
+        else
+          IO.foreach(f) { |s| out.puts s }
+        end
+      }
+      next
+    end
+
+    # If showing preliminary, strip out "!preliminary"
+    value = $1 if $showPreliminary && value =~ /^!preliminary ?(.*)$/
+
+    # Assume that the format doesn't switch while we're in the middle of this
+    if value =~ /^!(verbatim|VERBATIM)\s*(.*)$/ then
+      out.puts $2
+      node.children.each { |childNode| out.puts childNode.value }
+    elsif value =~ /^!(preamble|PREAMBLE)\s*(.*)$/ then
+      # Do nothing
+    elsif value =~ /^!showPreliminary$/ then
+      $showPreliminary = true
+    elsif value =~ /^!(comment|COMMENT)\s*(.*)$/ then
+      out.puts "% " + $2
+    elsif (not $showPreliminary) && value =~ /^!(preliminary|PRELIMINARY)\s*(.*)$/ then
+      out.puts "% " + $2
+    elsif value =~ /^!(escape|ESCAPE)\s+(.+)$/ then
+      escapeStuff = ($2 == "1" || $2 == "true")
+    elsif value =~ /^!(tmp)?(format|FORMAT)\s*[= ]\s*(\w+)$/ then
+      # Clean up last format, go to new format
+      finishStyle.call
+      if restoreStyleList == nil && $1 # Jump back here right after
+        restoreStyleList = styleList
+        doneTmp = false
+      end
+      styleList = styleList.update(currIndent, $3)
+      #puts "styleList: #{styleList}"
+    elsif value =~ /^!ruby(-verbose)?\s*(.*)$/ then
+      inLines = [$2] + flatten(node.children)
+      outLines = evalRuby(inLines, $1 != nil)
+      outLines = [outLines] unless outLines.is_a?(Array)
+      outLines.each { |line| out.puts line }
+    else
+      currIsContinue = value =~ ContinuePattern
+      nextIsContinue = nextNode && nextNode.value =~ ContinuePattern
+
+      # Restore from temporary style
+      if restoreStyleList && (not currIsContinue) # In a temporary style
+        if (not tmpDone) # First time, do nothing (go with temporary style)
+          tmpDone = true
+        else # Second time, restore before print stuff out
+          #puts "restore #{styleList} -> #{restoreStyleList}"
+          finishStyle.call
+          styleList = restoreStyleList
+          restoreStyleList = nil
+        end
+      end
+
+      style = styleList.get(currIndent)
+      
+      if not began then
+        if style.begin
+          out.print indent(currIndent) + style.begin
+          out.print ' % ' + node.source
+          out.puts ""
+        end
+        began = true
+      end
+
+      i = currIndent
+      t = value
+      if not t
+        raise "No value (too much or too little indent) at #{node.source}"
+      end
+      t, inMath = escape(t, inMath) if escapeStuff
+      out.print indent(i)
+      if currIsContinue
+        out.print blank(style.before) + t.sub(ContinuePattern, "")
+      else
+        out.print style.before + t
+      end
+      if not nextIsContinue
+        out.print style.after
+      end
+      out.print ' % ' + node.source
+      out.puts ""
+      writeForest(out, node.children, currIndent+1, styleList, includedFiles, escapeStuff)
+    end
+  }
+
+  # Finish
+  if began 
+    style = styleList.get(currIndent)
+    if style.end
+      node = forest.last
+      out.print indent(currIndent) + style.end
+      out.print ' % ' + node.source if node.source
+      out.puts ""
+    end
+  end
+
+  [styleList, escapeStuff]
+end
+
+############################################################
+
+def main
+  if ARGV.size != 1 then
+    puts "Converts an OTL file into a tex file with the same prefix."
+    puts "Usage: <otl file>"
+    exit 1
+  end
+  inFile = ARGV[0]
+  $filePrefix = inFile.sub(/\.otl$/, "");
+  outFile = $filePrefix + ".tex"
+  out = open(outFile, "w")
+
+  forest = readForest(inFile)
+
+  documentclassArgs = "[12pt]{article}"
+  forest = forest.map { |node|
+    if node.value =~ /^!documentclass(.*)$/
+      documentclassArgs = $1
+      nil
+    else
+      node
+    end
+  }.compact
+
+  out.puts <<EOF
+%%% THIS FILE IS AUTOMATICALLY GENERATED.  DON'T MODIFY, OR YOUR CHANGES MIGHT BE OVERWRITTEN!
+\\documentclass#{documentclassArgs}
+\\usepackage{fullpage,amsmath,amssymb,graphicx,color,bbm,url,stmaryrd,ifthen}
+\\usepackage[colorlinks=true]{hyperref}
+\\usepackage[utf8]{inputenc}
+EOF
+
+  # Print premable
+  forest.each { |node|
+    out.puts $2 if node.value =~ /^!(preamble|PREAMBLE)\s*(.*)$/
+  }
+
+  out.puts <<EOF
+\\begin{document}
+EOF
+
+  includedFiles = {}
+  writeForest(out, forest, 0, StyleList.new(DefaultStyleSpec), includedFiles, true)
+
+  out.puts <<EOF
+\\end{document}
+EOF
+  out.close()
+end
+
+main

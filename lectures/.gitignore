@@ -1,0 +1,7 @@
+*.pdf
+*.bbl
+*.blg
+*.toc
+figures.slides
+refdb
+sfig
