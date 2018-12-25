@@ -9,7 +9,7 @@ refdb:
 	git clone https://github.com/percyliang/refdb
 
 figures.slides: sfig figures.js utils.js
-	nodejs figures.js
+	node figures.js
 	touch figures.slides
 
 notes.pdf: inputFiles

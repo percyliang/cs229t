@@ -368,7 +368,7 @@ Asymptotics
 				Fact 2 (constant times Gaussian): if $v \sim \sN(0, \Sigma)$, then $A v \sim \sN(0, A \Sigma A^\top)$ for any matrix $A$.
 			The rest is just algebra:
 				First, note that $x^{(i)} - \theta^* \sim \sN(0, \sigma^2 I)$.
-				Next, we have that $S_n \eqdef \sum_{i=1}^n x^{(i)} \sim \sN(0, n \sigma^2 I)$ by Fact 1.
+				Next, we have that $S_n \eqdef \sum_{i=1}^n (x^{(i)}-\theta^*) \sim \sN(0, n \sigma^2 I)$ by Fact 1.
 				Finally, we have $\hat\theta - \theta^* = \frac{S_n}{n} \sim \sN\p{0, \frac{\sigma^2 I}{n}}$ by Fact 2.
 		\reflem{gaussianMeanParameterDeviation} tells us how the entire estimated vector behaves,
 		 but sometimes it's convenient to just get one number that tells us how we're doing.
