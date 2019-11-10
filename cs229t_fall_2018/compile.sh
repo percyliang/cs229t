@@ -1,4 +1,6 @@
 for filename in $(find . -maxdepth 5 -name "*.tex"); do
-    echo $filename
-    pdflatex $filename
+    if [  "$filename" != "./defs.tex" ];then
+        echo $filename
+        pdflatex $filename
+    fi
 done
