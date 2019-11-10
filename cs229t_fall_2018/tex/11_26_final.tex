@@ -1,0 +1,369 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[11pt]{article}
+\usepackage{tikz}
+
+\usepackage{fullpage,graphicx,psfrag,amsmath,amsfonts,verbatim, mathtools,amssymb, amsthm, bbm,enumitem}
+\usepackage[small,bf]{caption}
+\usepackage{float}
+
+\input defs.tex
+
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+
+% \newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+%   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+%     DRAFT --- a final version will be posted shortly}}}
+%   \vspace{-.25in}\vspace{-\baselineskip}
+% }
+
+\pagestyle{plain}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+% \draftnotice
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture 17               %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Zhaolin Ren                %%% FILL IN YOUR NAME HERE
+\hfill
+November 26, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Review and Overview}
+
+In the last few lectures, we have been studying the problem of online convex optimization (OCO). In particular, we have been working under the assumption of full access to the loss function at every iteration. In this lecture, we introduce the partial observation/bandit setting, where we do not have full access to the loss function. 
+
+To recap, recall the set-up of (OCO). 
+\paragraph{} 
+In each iteration $t = 1 \dots T$:
+\begin{itemize}
+    \item Player picks an action $\omega_t \in \Omega$, where $\Omega$ is a convex set
+    \item Environment picks a convex function $f_t: \Omega \mapsto [0,1]$
+    \item Player observes some information about $f_t$
+\end{itemize}
+Our goal is to choose $\omega_t$ to minimize regret:
+\begin{gather*}
+    \text{regret} \triangleq \bbE \left[\sum_{t=1}^T f_t(\omega_t) - \min_{\omega \in \Omega} \sum_{t=1}^T f_t(\omega) \right],
+\end{gather*}
+where the expectation is taken (potentially) over the randomness of both the algorithm and the loss functions $\left\{f_t\right\}_{t=1}^T$. The OCO framework can vary in its settings. One way in which it can differ is in the power of \textbf{observations}.
+
+\paragraph{Power of observations.} Player can observe different amounts of information on $f_t$.
+\begin{itemize}
+    \item \underline{Full-information setting}: player observes the entire loss function $f_t$
+    \item \underline{Bandit/partial observation setting}: player only observes $f_t(\omega_t)$
+\end{itemize}
+In this lecture, we will introduce examples of bandit OCO, and show how one might solve it by reducing to the full-information setting. Before we continue, note that the OCO framework can also vary in the power of \textbf{environment}. Below are two possible environment settings.
+
+\paragraph{Power of environment.} The environment can choose the $f_t$ with different levels of adaptivity and adversarialism:
+\begin{itemize}
+    \item \underline{Stochastic setting}: $f_t, \dots, f_T$ are i.i.d samples from some distribution $P$. Under this setting, the enviromment is not adversarial.
+    \item \underline{Oblivious setting}: $f_1, \dots, f_T$ are chosen before the game starts. Under this setting, the environment can be adversarial, but not adaptive. 
+\end{itemize}
+The lack of adversarialism means that the stochastic setting is easier to study than the oblivious setting. As such, in analyzing bandit problems, we will begin with the harder problem of working under the oblivious setting. 
+
+
+\section{Multi-armed bandit problem (oblivious setting)}
+
+We begin by studying the multi-armed bandit problem, which is essentially the expert problem with partial feedback. This is a special case of the partial observation/bandit OCO. 
+
+\subsection{Setup}
+
+The setup is as follows. Suppose there are $N$ experts, and that $\ell_t \in [0,1]^N$.
+\paragraph{}
+In each iteration $t = 1,\dots, T$:
+\begin{itemize}
+    \item player plays action $a_t \in [N]$ based on some probability distribution $p_t$, such that $a_t = a$ with probability $p_t(a)$
+    \item player receives loss $\ell_t(a_t) \in \bbR$
+\end{itemize}
+The difference with the expert problem is that here we only have access to the loss $\ell_t(a_t)$ for the expert we chose at time $t$, instead of access to the entire loss function $\ell_t$. We assume also that we are in the oblivious setting, where $\ell_1,\dots,\ell_T$ are chosen before the game starts.
+
+The regret in this problem is as follows:
+\begin{align*}
+    \text{regret}_{\text{bandit}} &= \bbE\left[ \sum_{t=1}^T \ell_t(a_t) \right] - \argmin_{a \in [N]} \sum_{t=1}^T \ell_t(a) \\
+    &=  \mathbb{E}\left[ \sum_{t=1}^T \langle p_t, \ell_t \rangle \right] - \text{argmin}_{a \in [N]} \sum_{t=1}^T \ell_t(a),
+\end{align*}
+where the expectation is taken over the randomness of our algorithm. 
+
+\subsection{Exploration vs Exploitation Tradeoff}
+At a high level, in contrast with the full-information setting, in the partial observation setting, there is a tradeoff between exploitation and exploration.
+
+For example, suppose we pick expert $a_t = 1$ for the first few iterations, and the loss $\ell_t(1)$ appears small. How do we know if expert 1 has really done well so far in comparison with the other experts? In the full-information setting, we can compare the performance of expert 1 against the performance of the other experts so far. In the partial observation setting, we do not have this luxury, and hence there is a need to explore more experts to see if  better experts exist. This creates a need for \textbf{exploration}.
+
+However, if other experts are worse-off, exploration might lead to more losses. Therefore, at some point, we need to \textbf{exploit} the best expert(s) we have seen so far. 
+
+\subsection{Reduction to expert problem}
+We will show that we can in fact reduce the multi-armed bandit problem to the expert problem. One natural idea is to estimate the functions $\ell_t$ from the information we have, namely $\ell_t(a_t)$.
+
+\subsubsection{Estimation of $\ell_t$}
+\paragraph{}
+In each iteration $t = 1,\dots, T$:
+\begin{itemize}
+    \item Player picks expert $a_t$ from some distribution $p_t$
+    \item Based on $p_t$, consider the following estimator, $\hat{\ell}_t$, where
+    \begin{gather*}
+        \hat{\ell}(a) = \dfrac{\ell_t(a)}{p_t(a)} \1(a = a_t) = \begin{cases} 
+        \dfrac{\ell_t(a_t)}{p_t(a_t)} & \text{ if } a = a_t \\
+        0 & \text{ if } a \neq a_t
+        \end{cases}
+    \end{gather*}
+\end{itemize}
+As an aside, the above estimator $\hat{\ell}_t$ is essentially a form of importance sampling. We will next show that conditional on knowing $p_t$, the estimator $\hat{\ell}_t$ is unbiased. 
+\begin{lemma}\label{lemma 1}
+Suppose $p_t(a) > 0$ for every $a \in [N]$. Then,
+$$\bbE\left[\hat{\ell}_t \mid p_t \right]  = \ell_t.$$
+As a natural consequence, taking expectation over the randomness of the algorithm,
+$$\bbE\left[\hat{\ell}_t \right] = \bbE \left[\bbE\left[\hat{\ell}_t \mid p_t \right]\right] = \ell_t.$$
+\end{lemma}
+\begin{proof}
+For any $a \in [N]$,
+\begin{align*}
+\mathbb{E} [ \hat{\ell}_t(a) \mid p_t ] &= \mathbb{P} \left[ a_t = a\right] \mathbb{E}\left[\hat{\ell}_t(a) \mid a_t = a \right] + \mathbb{P} \left[a_t \neq a \right] \mathbb{E}\left[\hat{\ell}_t(a) \mid a_t \neq a \right] \\
+    &= p_t(a) \cdot \dfrac{\ell_t(a)}{p_t(a)} + (1 - p_t(a)) \cdot 0 \\
+    &= \ell_t(a)
+\end{align*}
+\end{proof}
+
+Building on Lemma \ref{lemma 1}, we next introduce a result that allows us to interchange $\ell_t$ and $\hat{\ell}_t$ when analyzing the regret. This will be useful later.
+
+\begin{lemma}\label{lemma 2}
+Taking expectation over the randomness of the algorithm, we have
+    $$\bbE \left[\langle p_t, \hat{\ell}_t \rangle \right] = \bbE \left[\langle p_t, \ell_t \rangle \right]$$ 
+\end{lemma}
+
+\begin{proof}
+The result can be proven using a combination of the law of iterated expectations and Lemma \ref{lemma 1}. Observe that
+    \begin{align*}
+        \bbE \left[\langle p_t, \hat{\ell}_t \rangle \right] &=
+         \mathbb{E} \left [ \mathbb{E} \left[ \langle p_t, \hat{\ell}_t \rangle  \mid p_t \right] \right ]\\
+        &=  \mathbb{E} \left [ \langle p_t , \mathbb{E} \left[ \hat{\ell}_t  \mid p_t \right]  \rangle\right] \\
+        &= \bbE \left[\langle p_t, \ell_t \rangle \right],
+    \end{align*}
+    where the first step is by law of iterated expectations. Note that the outer expectation is with respect to the first $t-1$ iterations of the algorithm, which determine $p_t$. The second step uses the fact that conditional on $p_t$, we can take $p_t$ out of the conditional expectation term, and the last step is by Lemma \ref{lemma 1}. 
+\end{proof}
+\subsubsection{Passing $\hat{\ell}_t$ to the expert problem algorithm}
+
+Recall that in the original expert problem, there was an assumption that the losses $\ell_t$ was bounded in the range $[0,1]^N$. Suppose now that $\hat{\ell}_t(a)$ is bounded in the range $[0,1]^N$. This allows us to call the algorithm $\mathcal{A}$ for the expert problem with the estimator $\hat{\ell}_t$.
+
+Let $\text{regret}_{\text{bandit}}(a)$ denote the regret, compared to action $a$, in the bandit problem, and let $\text{regret}_{\text{expert}}(a)$ denote the regret, compared to action $a$, in the expert problem. Then, if we plug in the estimator $\hat{\ell}_t$ to the algorithm for the expert problem, we have that 
+\begin{align*}
+\text{regret}_{\text{expert}}(a) &\triangleq \mathbb{E}\left[\sum_{t=1}^T \langle \hat{\ell}_t, p_t \rangle \right] - \mathbb{E}\left[\sum_{t=1}^T \hat{\ell}_t(a) \right] \\
+&= \mathbb{E} \left[\sum_{t=1}^T \langle \ell_t, p_t \rangle \right] - \sum_{t=1}^T \ell_t(a) \\
+    &\triangleq \text{regret}_{\text{bandit}}(a),
+\end{align*}
+where in moving from the first to the second line we used Lemma \ref{lemma 1} and Lemma \ref{lemma 2}. 
+
+Hence, if we pass in the estimator $\hat{\ell}_t$ to the algorithm $\mathcal{A}$ for the expert problem, minimizing regret for the bandit problem is equivalent to minimizing regret for the expert problem.
+
+\paragraph{Caveat:}There is however one caveat to the above analysis - it is possible that $\hat{\ell}_t \notin [0,1]^N$.
+
+\paragraph{Fix:}To fix this issue, we need to make $\hat{\ell}_t$ bounded, and then rescale it such that it stays in the range $[0,1]^N$. To this end, we mix in the uniform distribution to form the probability distribution $p_t$. 
+
+\paragraph{}
+In each iteration $t = 1,\dots,T$:
+\begin{itemize}
+    \item Let $\hat{p}_t$ be the distribution of actions suggested by the expert problem algorithm $\mathcal{A}$.
+    \item Set $p_t = (1 - \alpha) \hat{p}_t + \alpha \dfrac{\mathbf{1}}{N}$, for some $0 < \alpha < 1 $ that we choose later. Note that here $\mathbf{1}$ denotes the $N$-dimensional vector with all ones, so $\mathbf{1}/N$ denotes the uniform distribution. 
+    \item As a consequence, $p_t(a) \geq \dfrac{\alpha}{N}$.
+    \item Since $\ell_t \in [0,1]^N$, it follows that
+    \begin{align*}
+        \hat{\ell}_t(a) &= \dfrac{\ell_t(a)}{p_t(a)} \1(a = a_t) \\
+        &\leq \dfrac{1}{p_t(a)} \\
+        &\leq \dfrac{N}{\alpha}, \quad \mbox{ since }p_t(a) \geq \dfrac{\alpha}{N}.
+    \end{align*}
+    \item This implies then that 
+    \begin{gather*}
+        \dfrac{\alpha}{N} \hat{\ell}_t \in [0,1]^N
+    \end{gather*}
+\end{itemize}
+We have resolved the issue of $\hat{\ell}_t \notin [0,1]^N$ at a cost: now, for any $a \in [N]$, we only know that $\hat{\ell}_t(a) \leq N/\alpha$, where $N/\alpha > 1$, while the true loss $\ell_t$ satisfies $\ell_t \in [0,1]^N.$
+
+\subsubsection{Analysis of regret after reduction}
+Let $\mathcal{A}$ be the algorithm used by the expert problem to output the optimal $\omega_t$ at every iteration $t$, which we detailed in the previous lecture. By the reduction outlined earlier, we have the following algorithm for the bandit problem:
+\paragraph{}
+In each iteration $t = 1,\dots,T$:
+\begin{itemize}
+    \item Call $\mathcal{A}$ to get a probability distribution $\hat{p}_t$ 
+    \item Set $p_t = (1 - \alpha) \cdot \hat{p}_t + \alpha \cdot \dfrac{\mathbf{1}}{N}$
+    \item Compute $\hat{\ell}_t$ using $p_t$
+    \item Feed $(\alpha/N) \hat{\ell}_t$ to $\mathcal{A}$, where we note that $(\alpha/N) \hat{\ell}_t \in [0,1]^N$.
+\end{itemize}
+
+
+Next, similar to in Lemma \ref{lemma 2} earlier, we can show another result allowing us to interchange $\ell_t$ and $\hat{\ell}_t$ that is useful. 
+
+\begin{lemma}\label{lemma 3}
+    Taking expectation over randomness of the algorithm, 
+    $$\bbE \left[\langle \hat{p}_t, \ell_t \rangle \right] = \bbE \left[\langle \hat{p}_t, \hat{\ell}_t \rangle \right]$$
+\end{lemma}
+
+\begin{proof}
+\begin{align*}
+\mathbb{E} \langle \hat{p}_t, \hat{\ell}_t \rangle &= \mathbb{E} \left [ \mathbb{E} \left[ \langle \hat{p}_t, \hat{\ell}_t \rangle  \mid \hat{p}_t \right] \right ]\\
+&=  \mathbb{E} \left [ \langle \hat{p}_t , \mathbb{E} \left[ \hat{\ell}_t  \mid \hat{p}_t \right]  \rangle\right] \\
+&=  \mathbb{E} \left [ \langle \hat{p}_t , \mathbb{E} \left[ \hat{\ell}_t  \mid p_t  \right] \rangle \right] \\
+&=  \mathbb{E} \left [ \langle \hat{p}_t , \ell_t \rangle \right].
+\end{align*} 
+In moving from the second to the third line we used the fact that knowing $\hat{p}_t$ is equivalent to knowing $p_t$. For the last step, we used Lemma \ref{lemma 1}. 
+\end{proof}
+
+
+By the guarantee of the expert problem shown in the last lecture, where we used the entropic regularizer, we have that
+\begin{align} \label{EP_regret}
+    \forall a \in [N], \quad \bbE\left[ \sum_{t=1}^T \left\langle \hat{p}_t, \dfrac{\alpha}{N} \hat{\ell}_t\right\rangle \right] - \bbE\left[\sum_{t=1}^T \dfrac{\alpha}{N} \hat{\ell}_t(a) \right] \leq O(\sqrt{T \log N})
+\end{align}
+We proceed to upper bound the regret of the bandit problem via reduction. Observe that
+\begin{align} \label{bandit_to_EP}
+    \text{regret}_{\text{bandit}}(a) &= \bbE \left[ \sum_{t=1}^T \left\langle p_t, \ell_t \right\rangle \right] - \bbE \left[ \sum_{t=1}^T \ell_t(a) \right] \nonumber\\
+    &= \bbE \left[ \sum_{t=1}^T \left\langle p_t, \hat{\ell}_t \right\rangle \right] - \bbE \left[ \sum_{t=1}^T \ell_t(a) \right] \nonumber\\
+    &= \bbE \left[ \sum_{t=1}^T \left\langle (1 - \alpha) \hat{p}_t + \dfrac{\alpha}{N} \mathbf{1}, \hat{\ell}_t \right\rangle \right] - \bbE \left[ \sum_{t=1}^T \hat{\ell}_t(a) \right] \nonumber\\
+    &= \bbE\left[ \sum_{t=1}^T \left\langle \hat{p}_t, \hat{\ell}_t \right\rangle \right] + \alpha \cdot  \bbE \left[ \sum_{t=1}^T \left\langle \dfrac{\mathbf{1}}{N} - \hat{p}_t, \hat{\ell}_t \right\rangle \right] - \bbE\left[ \sum_{t=1}^T \hat{\ell}_t(a) \right] \nonumber\\
+    &\leq \dfrac{N}{\alpha} O(\sqrt{T \log N}) + \alpha \cdot \bbE \left[ \sum_{t=1}^T \left\langle \dfrac{\mathbf{1}}{N} - \hat{p}_t, \ell_t \right\rangle\right] \nonumber \\
+    &\leq \dfrac{N}{\alpha} O(\sqrt{T \log N}) + 2\alpha T.
+\end{align}
+Going from the first to the second line, we used Lemma \ref{lemma 2} to exchange $\ell_t$ and $\hat{\ell}_t$. Going from the second to the third line, we used Lemma \ref{lemma 1} to exchange $\ell_t(a)$ and $\hat{\ell}_t(a)$. Going from the third to the fourth line, we used the fact that we can write 
+\begin{align*}
+    (1 - \alpha) \hat{p}_t + \alpha \cdot \mathbf{1}/N = \hat{p}_t + \alpha(\mathbf{1}/N - \hat{p}_t).
+\end{align*}
+To move from the fourth to the fifth line, we used the result for the regret of the expert problem shown above in (\ref{EP_regret}), and Lemma \ref{lemma 3} to exchange $\ell_t$ and $\hat{\ell}_t$.
+For the fifth to the final line, we used duality of the $L_1$ and $L_{\infty}$ norms, and the bounds
+\begin{gather*}
+    \left\Vert \dfrac{\mathbf{1}}{N} - \hat{p}_t \right\Vert_1 \leq 2, \quad \norm{\ell_t}_{\infty} \leq 1.
+\end{gather*}
+
+To choose the optimal $\alpha$ in order to minimize the bound in (\ref{bandit_to_EP}), we can differentiate the quantity
+$$Q(\alpha) = (N/\alpha) O(\sqrt{T \log N}) + 2\alpha T$$ 
+with respect to $\alpha$, giving us 
+$$\alpha^* = O(T^{-1/4} \sqrt{N} \log^{1/4}N).$$ Then, by (\ref{bandit_to_EP}) above,
+\begin{align*}
+    \text{regret}_{\text{bandit}}(a) &\leq \dfrac{N}{\alpha^*} O(\sqrt{T \log N}) + 2\alpha^* T \\
+    &\leq O(T^{3/4} \sqrt{N} \log^{1/4}N),
+\end{align*}
+which implies that
+\begin{gather*}
+    \text{regret}_{\text{bandit}} \leq O(T^{3/4} \sqrt{N} \log^{1/4}N).
+\end{gather*}
+While the dependence on $T$ here is not as good as the $\sqrt{T}$ for the expert problem, it is better than the trivial bound $O(T)$. In fact, the regret for the multi-armed bandit problem can be further reduced to $O(\sqrt{T})$, but the proof is quite complicated, and we will not do it in class. Those interested can refer to Lecture 16 in Percy Liang's notes for more details.
+
+\section{General OCO with partial observation}
+
+The reduction approach we saw earlier also works for more general OCO problems with partial observation. As described in section 5 of the previous lecture (Lecture 16), we can reduce the more general problem of online convex optimization to online linear optimization. In particular, recall that in this setup, the full loss function is the linear function 
+$$g_t(\omega) = \brac{\nabla f_t(\omega_t), \omega}.$$ 
+In the case of general OCO with partial information, we only observe $f_t(\omega_t)$. We can then reduce the problem to OCO with full information if we can find an unbiased estimate of $\nabla f_t(\omega_t)$ using $f_t(\omega_t)$.
+
+\subsection{Estimating $\nabla f_t(\omega_t)$ from $f_t(\omega_t)$.} 
+We note that the following result is useful more generally, since it allows us to estimate the gradient of a function using only information about function values.
+
+\begin{lemma}
+Suppose $f: \bbR^d \to \bbR$ is twice differentiable, with bounded Hessian. Then,
+\begin{align*}
+    \nabla f(w) &= \lim_{\delta \to 0} \bbE_{\xi \sim \mathbb{S}^{d-1}} \left[ \dfrac{d\xi}{\delta} \cdot f(w + \xi \delta)  \right],
+\end{align*}
+where $\mathbb{S}^{d-1}$ refers to the unit sphere $\left\{x \in \bbR^d: \norm{x}_2 = 1 \right\}$ in $\bbR^d$, and $\xi$ is drawn uniformly from the sphere $\mathbb{S}^{d-1}$.
+\end{lemma}
+\begin{proof}
+The key idea behind the proof is to use Taylor expansion. We have that
+\begin{alignat*}{2}
+    & \quad \quad \quad f(w + \delta \xi) = f(w) + \brac{\nabla f(w), \xi \delta} + O(\delta^2) \\
+    &\implies  \dfrac{f(w + \delta \xi) \xi}{\delta} = \dfrac{f(w) \xi}{\delta} + \brac{\nabla f(w), \xi} \xi + O(\delta) \\
+    &\implies \bbE \left[ \dfrac{f(w + \delta \xi) \xi}{\delta}  \right] = 0 + \bbE \left[ \xi \xi^T \nabla f(w) \right] + O(\delta) \\
+    &\implies \bbE \left[ \dfrac{f(w + \delta \xi) \xi}{\delta}  \right] = \begin{bmatrix} 
+   1/d & & \\
+    & \ddots & \\
+    & & 1/d 
+    \end{bmatrix}
+    \nabla f(w) + O(\delta) \\
+    &\implies \bbE\left[ \dfrac{d\xi}{\delta} \cdot f(w + \xi \delta) \right] = \nabla f(w) + O(\delta). 
+\end{alignat*}
+Taking limit $\delta \to 0$ then completes the proof. The first step uses the assumption of a bounded Hessian to control the second-order term. To get from the third to the fourth line, we relied on a calculation of $\bbE[\xi \xi^T]$. Since the $\xi$'s are uniformly distributed on, it follows that
+\begin{itemize}
+    \item $\bbE[\xi_i \xi_j]= 0$ for any $1 \leq i \neq j \leq d$, by symmetry.
+    \item $\bbE[\xi_i^2] = 1/d$ for any $i \in [d]$, since $\norm{\xi}_2 = 1$, and $\xi$ has $d$ coordinates, each of which should behave similarly given that $\xi$ is uniformly distributed on $\mathbb{S}^{d-1}$. 
+\end{itemize}
+This completes the proof. 
+\end{proof}
+
+\section{Stochastic Multi-Armed Bandit Problem}
+
+For the remaining time in this lecture, we will begin analyzing the multi-armed bandit problem in the stochastic setting.
+\paragraph{}
+The setup is as follows:
+\begin{itemize}
+    \item Again, assume that there are $N$ experts. 
+    \item Suppose that $\ell_1,\dots, \ell_T \overset{i.i.d}{\sim} D$ for some probability distribution $D$
+    \item Let $D_a$ denote the distribution of $\ell(a)$ when $\ell \sim D$
+    \item Let $\mu = \bbE_{\ell \sim D} \bbE[\ell]$ denote the expected loss vector, where $\mu \in \bbR^N$.
+    \item Let $a^* = \argmin_{a \in [N]} \mu(a)$
+    \item We only see $\ell_t(a_t)$ at every iteration $t$, where $a_t$ is the expert we choose. 
+\end{itemize}
+The regret is the following:
+\begin{align*}
+    \text{regret} \triangleq \bbE \left[ \sum_{t=1}^T \ell_t(a_t) - \sum_{t=1}^T \ell_t(a^*) \right],
+\end{align*}
+where the expectation is taken over the randomness of our algorithm, and the stochastic loss functions $\ell_1,\dots,\ell_T$. 
+
+A challenge in the stochastic setting with partial feedback is that we never see the true mean loss function $\mu$. Consider the following scenario.
+\paragraph{}
+\begin{tikzpicture}
+\draw[->] (0,0) -- (10,0) node[right] {Experts};
+\draw[->] (0,0) -- (0,8) node[left] {Loss};
+\node at (1.5,-0.25) {1};
+\node at (3,-0.25) {2};
+\node at (4.5,-0.25) {3};
+\node at (9,-0.25) {$N$};
+\draw[fill] (1.5,5) circle [radius=0.05];
+\node [below] at (1.5,5) {$\mu(1)$};
+\node[color = red] at (1.5,7) {+};
+\node[color = red] at (1.5,6) {+};
+\node[color = red] at (1.5,3) {+};
+\draw[fill] (3,3) circle [radius=0.05];
+\node [below] at (3,3) {$\mu(2)$};
+\node[color = red] at (3,7) {+};
+\draw[fill] (4.5,7) circle [radius=0.05];
+\node [below] at (4.5,7) {$\mu(3)$};
+\node[color = red] at (4.5,6) {+};
+\draw[fill] (9,6) circle [radius=0.05];
+\node [below] at (9,6) {$\mu(N)$};
+\node[color = red] at (9,7) {+};
+\node[color = red] at (9,5) {+};
+\end{tikzpicture}
+\paragraph{}
+In the above plot, the red plus signs denote the (random) losses we see during the course of the algorithm for each expert. While the expected loss for expert 2, $\mu(2)$, is the lowest in the plot above, the one time we did see a loss for expert $2$, the loss was significantly higher than the true mean $\mu(2)$. As such, on the basis of the available evidence, we might erroneously conclude that expert 2 is not a good expert, when the truth was that we simply got unlucky with our random draws. 
+
+The above scenario highlights the tradeoff between exploitation and exploration in a stochastic multi-armed bandit problem. We will continue the discussion in the next lecture. 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

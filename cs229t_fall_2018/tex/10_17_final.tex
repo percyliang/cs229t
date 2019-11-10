@@ -1,0 +1,296 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+ 
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{remark}{Remark}
+
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+\newcommand{\HH}{\mathcal{H}}
+\newcommand{\RR}{\mathcal{R}}
+\newcommand{\IR}{\mathbb{R}}
+\newcommand{\IE}{\mathbb{E}}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\normt}[1]{\left\lVert#1\right\rVert_2}
+\newcommand{\abs}[1]{\left\lvert#1\right\rvert}
+\DeclarePairedDelimiter\set\{\}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\pagestyle{plain}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+% \draftnotice
+
+\begin{center}
+	\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture \#8               %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Sina Semnani                  %%% FILL IN YOUR NAME HERE
+\hfill
+October 17, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\section{Review and Overview}
+In the last session we introduced an interesting phenomenon that occures during
+the training of a two-layer
+feed-forward neural network and attempted to explain it using Rademacher complexity.
+Empirically, we observe that increasing the number
+of neurons in the hidden layer of such networks (i.e. increasing the over-parametrization)
+reduces the generalization error. We also proved a bound for Rademacher complexity of two-layer
+neural netwroks that grew with $m$ (number of hidden neurons).
+
+In this session we will prove a stronger bound that will not scale with $m$.
+We also apply this bound and discuss how this bound can be useful.\footnote{For more details and additional
+	proofs see \cite{Wei2018}.}
+
+\section{Stronger bound for Rademacher complexity}
+First, let us set up a few notations.
+Let $\Theta=\left(w, U\right)$ denote the parameters of the neural network where
+$U \in \IR^{m\times d}$ and $w \in \IR^{m}$ are the first and second layer weights.
+$x_i \in \IR^d$ and $y_i \in \set{-1,+1}$ for $i \in \left[n\right]$ are the
+input data and labels. In this section we only consider the binary classification problem.
+
+The activation function is defined as
+$$\phi\left(x\right) = {\rm ReLU}\left(x\right)=\max\set{x, 0}$$
+
+Given parameters $\Theta$, the neural network computes the function
+$$f_\Theta\left(x\right)= \sum\limits_{j=1}^{m} w_{j} \phi\left(u_{j}^{T}x\right)$$
+where $u_j^T$ is the $j$th row of matrix $U$.
+
+Define
+$$\HH' \triangleq \set{f_\Theta : \normt{w} \leq B'_2, \normt{u_j} \leq B_2 \enskip \forall j=1, \dotsc, m}$$
+In the last lecture we proved that if $\normt{x_i} \leq C$, then:
+\begin{equation}
+	\label{weakbound}
+	\RR_S(\HH')=\frac{2 B_2 B'_2 C \sqrt{m}}{\sqrt{n}}
+\end{equation}
+
+
+
+\begin{theorem}
+	\label{bound}
+	Define $B(w, U) \triangleq \sum\limits_{j=1}^{m} \abs{w_j} \normt{u_j}$ and
+	$\HH \triangleq \{f_\Theta: B(w, U) \leq B_1 \}$. If $\normt{x_i} \leq C$
+	then
+	\begin{equation}
+		\label{strongbound}
+		\RR_S(\HH) \leq \frac{2 B_1 C}{\sqrt{n}}
+	\end{equation}
+	
+\end{theorem}
+Note that this expression might still implicitly depend on $m$ since $B_1$ can increase with $m$.
+We will address this issue later by showing that dividing by $\gamma$ cancels out
+the effect of $m$.
+
+When using bound \ref{strongbound} in practice, we calculate $B(w, U)$ after the neural network
+is trained, and plug in $B_1=B(w,U)$ to get the upper bound. Similarly, for bound  \ref{weakbound}
+we plug in $B_2$ and $B_2'$. In this sense, for every fixed, trained neural network,
+bound \ref{strongbound} is at least as strong as bound \ref{weakbound}.
+The following inequalities justify this statement:
+\begin{align*}
+	B_1=B\left(w, U\right) & = \sum\limits_{j=1}^{m} \abs{w_j} \normt{u_j}                                                                    \\
+				& \leq \sqrt{\left(\sum\limits_{i=1}^m w_j^2\right)
+				\left(\sum\limits_{i=1}^m \normt{u_j}^2\right)} && \text{Cauchy–Schwarz inequality} \\
+	            & \leq \normt{w} \sqrt{m} \enskip \underset{j}{\max} \normt{u_j}                                                           \\
+	            & \leq B'_2 B_2 \sqrt{m}
+\end{align*}
+Therefore
+$$\frac{2B_1C}{\sqrt{n}} \leq \frac{2B_2B_2'C\sqrt{m}}{\sqrt{n}}.$$
+
+Using Theorem \ref{bound}, we can prove a generalization bound with the following form:
+$$L_\gamma(h) \lesssim \hat{L}_\gamma(h) + \frac{\RR_S(\HH)}{\gamma}
+	+\sqrt{\frac{\log(\frac{2}{\delta})}{n}}$$
+
+\begin{theorem}
+	Fix $B_1$ and $\gamma >0$ and define $\HH_{B_1} \triangleq \{f_\Theta: B(w, U) \leq B_1 \}$. Then with probability $\geq 1-\delta$:
+
+	$$\forall h \in \HH_{B_1}: L_\gamma (h) \lesssim \hat{L}_\gamma(h) + \frac{B_1 C}{\gamma \sqrt{n}}
+		+ \sqrt{\frac{\log\left(\frac{2}{\delta}\right)}{n}}$$
+We can think of $\frac{\gamma}{B_1}$ as the normalized margin.
+\end{theorem}
+
+
+We now prove Theorem \ref{bound}:
+\begin{proof} Define $\hat{u}_j \triangleq \frac{u_j}{\normt{u_j}}$ as the length-normalized $u_j$.
+	\begin{align*}
+		\RR_S(\HH)                                              & = \frac{1}{n} \underset{\sigma_i}{\IE}
+		\left[\underset{f_\Theta \in \HH}{\sup} \sum\limits_{i=1}^n
+		\sigma_i f_\Theta\left(x_i\right)\right]                           &                                                                                  & \text{definition of } R_S(\HH)   \\
+		                                                        & = \frac{1}{n} \underset{\sigma_i}{\IE}
+		\left[\underset{f_\Theta \in \HH}{\sup} \sum\limits_{i=1}^n \sigma_i \sum\limits_{j=1}^m
+		w_j \phi\left(u_j^T x_i\right)\right]                              &                                                                                  & \text{definition of } f_\Theta   \\
+		                                                        & = \frac{1}{n} \underset{\sigma_i}{\IE}
+		\left[\underset{f_\Theta \in \HH}{\sup} \sum\limits_{i=1}^n \sigma_i \sum\limits_{j=1}^m
+		w_j \normt{u_j} \phi\left(\hat{u}_j^T x_i\right)\right] &                                                                                  & \text{because }\phi(ax)=a\phi(x) \\
+		                                                        & = \frac{1}{n} \underset{\sigma_i}{\IE}
+		\left[\underset{f_\Theta \in \HH}{\sup} \sum\limits_{j=1}^m w_j \normt{u_j}
+			\sum\limits_{i=1}^n \sigma_i \phi\left(\hat{u}_j^T x_i\right)\right]                                                                                                          \\
+		                                                        & \leq \frac{1}{n} \underset{\sigma_i}{\IE}
+		\left[\left(\underset{f_\Theta \in \HH}{\sup} \sum\limits_{j=1}^m \abs{w_j}\normt{u_j}\right)
+			\left( \underset{1\leq j \leq m}{\max}\abs{\sum\limits_{i=1}^n
+				\sigma_i \phi\left(\hat{u}_j^T x_i\right)}\right)\right]                                                                                                                      \\
+		                                                        & = \frac{1}{n} B_1 \underset{\sigma_i}{\IE} \left[\underset{1 \leq j\leq m}{\max}
+			\abs{\sum\limits_{i=1}^n \sigma_i \phi\left(\hat{u}_j^T x_i\right)}\right]                                                                                                               \\
+		                                                        & \leq \frac{1}{n} B_1
+		\underset{\sigma_i}{\IE} \left[\underset{\normt{\hat{u}}=1}{\sup}
+			\abs{\sum\limits_{i=1}^n \sigma_i \phi\left(\hat{u}_j^T x_i\right)}\right]                                                                                                    \\
+	\end{align*}
+
+	We know that
+
+	\begin{align*}
+		\underset{\sigma_i}{\IE} \left[\underset{\normt{\hat{u}}=1}{\sup}
+			\abs{\sum\limits_{i=1}^n \sigma_i \phi\left(\hat{u}_j^T x_i\right)}\right]
+		 & \leq 2n\RR_n(\set*{x \mapsto \phi(u^T x): \normt{u} \leq 1}) &  & \text{} \\
+		 & \leq 2n \RR_n(\set*{x \mapsto u^T x: \normt{u} \leq 1})                   \\
+		 & \leq 2n \frac{C}{\sqrt{n}}                                                \\
+		 & = 2\sqrt{n}C
+	\end{align*}
+
+	The first inequality is Lemma 1 from scribe note 5 (the two sides are multiplied by $n$),
+	the second inequality uses Talagrand's lemma and the fact that $\phi$ is a 1-Lipschitz function.
+	We proved the third inequality in the previous lecture. So
+	$$\RR_S(\HH) \leq \frac{1}{n} B_1 \underset{\sigma_i}{\IE}
+		\left[\abs{\underset{\normt{\hat{u}}=1}{\sup}\sum\limits_{i=1}^n
+				\sigma_i \phi(\hat{u}^T x_i)} \right] \leq \frac{2B_1 C}{\sqrt{n}}$$
+\end{proof}
+
+\section{Margin-based generalization error}
+Intuitively, we want to show that if we optimize loss plus a small regularization factor, normalized margin will be large, hence the generalization error will be small. In this section we prove the theorem for
+exponential loss instead of logistic loss since it is easier, but the results hold for logistic loss as well.
+
+First, let us define a few notations.
+Define the $\lambda$-regularized exponential loss as
+$$L_\lambda (\Theta) = \frac{1}{n} \sum_{i=1}^n \exp\left(-y_i f_\Theta(x_i)\right)
+	+ \lambda \normt{w}^2 + \lambda \norm{U}_F^2$$ where
+$\normt{w}^2 + \norm{U}_F^2 = \normt{\Theta}^2$.
+
+Let $\Theta_{\lambda,m}$ be the global optimizer of $L_{\lambda,m}$ (in a neural network with $m$ hidden neurons).
+
+Margin of a parameter is defined to be the following:
+$$\gamma(\Theta) = \underset{1\leq i \leq n}{\min}\enskip y_i f_\Theta(x_i)$$
+Note that if a neural network misclassifies some inputs, the margin can be negative.
+
+Margin of the global optimizer is defined as
+$$\gamma_{\lambda,m}=\gamma\left(\frac{\Theta_{\lambda,m}}{\normt{\Theta_{\lambda,m}}}\right)$$
+
+Maximum possible margin for a network with $m$ hidden neurons is 
+$$\gamma^{*,m} \triangleq \underset{\normt{\Theta} \leq 1}{\max} \gamma(\Theta)$$
+
+and
+$\Theta^{*,m} \triangleq \underset{\normt{\Theta} \leq 1}{\argmax}\enskip \gamma(\Theta)$
+is the parameter that achieves that maximum.
+
+\begin{lemma}[homogeneity of feed-forward neural networks] $f_{\alpha \Theta}(x) = \alpha^2 f_\Theta(x) \enskip \forall \alpha \in \IR$.
+\end{lemma}
+\begin{proof}
+	$$f_{\alpha \Theta}(x) = \sum\limits_{j=1}^m \alpha w_j \phi\left(\alpha u_j^Tx\right)
+		= \sum\limits_{j=1}^m \alpha^2 w_j \phi\left(u_j^Tx\right)=\alpha^2f_{\Theta}(x)$$
+\end{proof}
+
+\begin{theorem}
+	\label{gtz}
+	Assume $\gamma^{*,m} > 0$. Then as $\lambda \rightarrow 0$,
+	$\gamma_{\lambda,m} \rightarrow \gamma^{*,m}$ and $\Theta_{\lambda,m} \rightarrow \Theta^{*,m}$.
+\end{theorem}
+
+\begin{remark}
+	$\gamma^{*,1} \leq \gamma^{*,2} \leq \dotso$ i.e. $\gamma^{*,m}$ is non-decreasing in the hidden layer size.
+\end{remark}
+This is due to the fact that a network with $m+1$ neurons in its hidden layer can
+simulate a network with $m$ neurons in the hidden layer by setting all additional parameters to zero.
+
+\begin{remark} As we increase $m$ (over-parametrization), the upper bound on the generalization error gets smaller (better).
+	\begin{align*}
+		B_1(w^{*,m}, U^{*,m}) & = \sum\limits_{j=1}^m \abs{w_j^{*,m}} \normt{u_j^{*,m}}      \\
+		                      & \leq \sum\limits_{j=1}^m \frac{1}{2} \left(\abs{w_j^{*,m}}^2
+		+\normt{u_j^{*,m}}^2\right)                                                          \\
+		                      & = \frac{1}{2} \left(\normt{w^{*,m}}^2
+		+\norm{U^{*,m}}_F^2\right)                                                           \\
+		                      & =\frac{1}{2} \normt{\Theta^{*,m}}^2                          \\
+		                      & \leq \frac{1}{2}
+	\end{align*}
+
+	So we have
+	$$L_{\gamma^{*,m}}(f_{\Theta^{*,m}}) \leq \hat{L}_{\gamma^{*,m}}(f_{\Theta^{*,m}})
+		+ \frac{C}{2\gamma^{*,m}\sqrt{n}} + \sqrt{\frac{\log(\frac{2}{\delta})}{n}}$$
+\end{remark}
+
+From the above statement and the previous remark, we conclude this remark.
+
+We now prove Theorem \ref{gtz}:
+
+\begin{proof}
+	\begin{align*}
+		L_\lambda(\Theta_\lambda) & \leq
+		L_\lambda(\normt{\Theta_\lambda} \Theta^*)                    \\
+		                          & = \frac{1}{n} \sum\limits_{i=1}^n
+		\exp\left(-y_i f_{\normt{\Theta_\lambda}\Theta^*}\left(x_i\right)\right)
+		+\lambda \normt{\Theta_\lambda}^2 \normt{\Theta^*}^2          \\
+		                          & \leq \frac{1}{n}
+		\sum\limits_{i=1}^n \exp(-y_i \normt{\Theta_\lambda}^2 f_{\Theta^*}(x_i))
+		+ \lambda \normt{\Theta_\lambda}^2
+	\end{align*}
+
+
+	$\forall i: y_i \normt{\Theta_\lambda}^2 f_{\Theta^*} (x_i) \geq \normt{\Theta_\lambda}^2 \gamma^*$
+	by definition of $\gamma^* = \underset{1 \leq i \leq n}{\min} \enskip y_i f_{\Theta^*} (x_i)$.
+
+	Therefore
+	$$L(\normt{\Theta_\lambda} \Theta^*) \leq \exp(-\normt{\Theta_\lambda}^2 \gamma^*)
+		+\lambda\normt{\Theta_\lambda}^2$$
+\end{proof}
+
+We will continue this proof in the next lecture.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliography{10_17_final}
+\bibliographystyle{plain}
+
+\end{document}

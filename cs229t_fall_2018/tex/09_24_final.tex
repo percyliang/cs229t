@@ -1,0 +1,163 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+
+\usepackage{mathtools}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+
+\newcommand\iid{\stackrel{\mathclap{\tiny\normalfont\mbox{i.i.d.}}}{\sim}}
+\newcommand\defn{\stackrel{\mathclap{\tiny\Delta}}{=}}
+\newcommand\E{\mathbb{E}}
+\newcommand\Var{\mathrm{Var}}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{cor}[theorem]{Corollary}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem*{remark*}{Remark}
+
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+
+\pagestyle{plain}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture \#1               %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Zach Izzo                 %%% FILL IN YOUR NAME HERE
+\hfill
+September 24, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Review and Overview}
+In this lecture we delineate a mathematical framework for supervised learning. We focus on regression problems and define the notion of the loss/risk associated with a model. We then analyze a particular loss function (the squared loss) in a general setting, then specialize our result to the case of linear models. We next define the notion of parameterized families of hypotheses and the maximum likelihood estimate, and we conclude with an asymptotic result relating the training MLE to the true maximum likelihood parameter.
+
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cY}{\mathcal{Y}}
+\section{Formulation of supervised learning}
+We begin by constructing a mathematical framework for prediction problems. Our framework consists of the following elements:
+\begin{enumerate}
+	\item A space of possible data points $\cX$.
+	\item A space of possible labels $\cY$.
+	\item A joint probability distribution $P$ on $\cX\times \cY$. We assume that our training data consists of $n$ points $$(x^{(1)}, y^{(1)}), \: \ldots, \: (x^{(n)}, y^{(n)}) \: \iid \: P$$ each drawn independently from $P$.
+	\item A prediction function/model $f: \cX\rightarrow \cY$.
+	\item A loss function $\ell: \cY\times \cY\rightarrow \mathbb{R}$. We will usually assume that $\ell$ is bounded below by some constant, typically $0$.
+\end{enumerate}
+Given the prediction function $f$ and the loss function $\ell$, the loss of an example is $\ell(f(x),y)$. We can then define the \textit{expected risk} (or \textit{expected loss}, or \textit{population risk})
+$$L(f) \defn \E_{(x,y)\sim P} [\ell(f(x),y)].$$ Our goal will be to obtain a small expected loss. Often it will be infeasible to consider all possible models $f$, so we may restrict ourselves to a certain family of hypotheses $\mathcal{F}$. In this case, we define the \textit{excess risk} of a model $f$ as $$L(f) - \inf_{g\in\mathcal{F}} L(g).$$ This gives us a measure of how well our model fits the data relative to the best we can hope to do within our set of options $\mathcal{F}$.
+
+Within this framework, there are two main types of problems we will consider: \textit{regression} problems, where the set of labels is $\cY=\mathbb{R}$; and \textit{classification} problems, where the set of labels is some finite set $\cY=\{1,\ldots,k\}$. We will focus on regression problems in this lecture.
+
+\section{Regression problems and squared loss}
+We consider the regression problem of predicting $y$ given $x$. We take as our loss function the \textit{squared loss} $$\ell(\hat{y},y) = (\hat{y}-y)^2, \hspace{.5in} L(f) = \E_{(x,y)\sim P}[(f(x)-y)^2].$$ In this setting, we can decompose the risk in a very informative way.
+\begin{lemma}[Decomposition of loss] \label{decomp}
+Under the squared loss, we have the decomposition $$L(f) = \E_{x\sim P_x} [(f(x)-\E[y \: | \: x])^2] + \E_{x\sim P_x}[\Var(y\: | \:x)]$$ where $P_x$ is the marginal distribution of $x$.
+\end{lemma}
+The second term in this expansion is the intrisic variable of the label; it gives a lower bound on the loss we can achieve. Since the first term in the decomposition is nonnegative, it is an immediate corrolary that the optimal model is $f(x) = \E[y \: | \: x]$.
+
+In order to prove Lemma 1, we make use of the following claim.
+\begin{claim}
+  \label{claim:variance}
+If $Z$ is a random variable and $a$ is a constant, then $$\E[(Z-a)^2] = (\E[Z]-a)^2 + \Var(Z).$$
+\end{claim}
+The proof of this claim is left as an exercise on HW 0. We are now ready to prove Lemma 1.
+\begin{proof}[Proof of Lemma \ref{decomp}]
+We have
+\begin{align*}
+    L(f) &= \E[(f(x)-y)^2] \\
+    &= \E_{x\sim P_x}[\E_{P_{y \; | \;x}}[(f(x)-y)^2\: | \: x]] & \mathrm{(Law~{} of~{} total~{} expectation)} \\
+    &= \E_{x\sim P_x}[(f(x)-\E[y \: | \: x])^2 + \Var(y \: | \: x)]. & \mathrm{(Claim~{} \ref{claim:variance})}
+\end{align*}
+Note that Claim \ref{claim:variance} holds in the third equation since $f(x)$ is a constant when we have conditioned on $x$. The desired result follows from linearity of expectation.
+\end{proof}
+Lemma \ref{decomp} gives us a general lower bound on risk under squared loss. If we impose more structure on the set of hypotheses $\mathcal{F}$ from which we can select $f$, we can gain more information on the risk.
+
+\section{Linear regression under squared loss}
+A commonly used choice of hypotheses is the set of linear functions: $$\mathcal{F} = \{f: \mathbb{R}^d \rightarrow \mathbb{R} \: | \: f(x) = w^\top x, \: w\in \mathbb{R}^d\}.$$ For $f\in\mathcal{F}$, we then have $$L(f) = L(w) = \E[(w^\top x-y)^2].$$ Henceforth, we will denote $w^* \in \mathrm{argmin}_{w\in\mathbb{R}^d} L(w)$ and $\hat{w}$ will denote a model learned from training data.
+
+One may ask why we have only allowed linear functions with $0$ instead of allowing a nonzero intercept. Actually, the framework we have outlined above is enough to accomodate nonzero intercepts. If we wish to analyze the function $w^\top x + b$, we can simply set $\tilde{x} = (x,1)$ and $\tilde{w} = (w,b)$. Then $\tilde{w}^\top \tilde{x} = w^\top x + b$ and we have reduced to the case of $0$ intercept.
+
+When we restrict to linear models, we can further decompose the risk under squared loss.
+\begin{lemma} \label{lin}
+With $w^*\in \mathrm{argmin}_{w\in \mathbb{R}^d}L(w)$, we have \begin{equation}\label{decomp2}L(\hat{w}) = \E_x [\Var(y \: | \: x)] + \E_x[(\E[y\: | \: x]-w^{*\top} x)^2] + \E_x[(w^{*\top} x-\hat{w}^\top x)^2].\end{equation}
+\end{lemma}
+The second term in equation (\ref{decomp2}) can be thought of as the approximation error incurred by linear models. The third term can be interpreted as the estimation error we incur from having only a finite sample.
+\begin{proof}
+Define $g(\hat{w}) \defn \E[(\E[y\: | \: x]-\hat{w}^\top x)^2]$. By Lemma \ref{decomp}, \begin{equation}\label{lem1}L(\hat{w}) = \E[\Var(y\: | \: x)] + g(\hat{w}).\end{equation} Observe that since $w^*\in \mathrm{argmin} L(w)$, $\nabla L(w^*)=0$. Furthermore, since $\E_x[\Var(y\: | \: x)]$ is a constant with respect to $w$, we have
+\begin{align*}
+    \nabla L(w) &= \nabla g(w) \\
+    &= \E[\nabla_w(\E(y\: | \: x) -w^\top x)^2] \\
+    &= 2\E[(\E(y\: | \: x) - w^\top x)x].
+\end{align*}
+Since $\nabla L(w^*)=0$ we have \begin{equation}\label{vanish}\E[(\E[y \: | \: x]-w^{*\top}x)x]=0.\end{equation} Next, we expand:
+\begin{align*}
+    g(\hat{w}) &= \E[(\E[y\: | \: x]-\hat{w}^\top x)^2] \\
+    &= \E[((\E[y\: | \:x]-w^{*\top}x)-(\hat{w}^\top x-w^{*\top}x))^2] \\
+    &=\E[(\E[y\: | \: x] - w^{*\top}x)^2 + (\hat{w}^\top x - w^{*\top}x)^2] \\
+    &\hspace{.25in} -2\E[(\E[y \: | \: x] - w^{*\top}x)(\hat{w}^\top x-w^{*\top}x)].
+\end{align*}
+Finally, observe that $$\E[(\E[y\: | \:x] - w^{*\top}x)(\hat{w}^\top x - w^{*\top}x)] = (\hat{w}^\top - w^{*\top})\E[(\E[y\:|\:x]-w^{*\top}x)x].$$ By equation (\ref{vanish}), this quantity vanishes and it follows that
+\begin{equation}\label{g}g(\hat{w}) = \E[(\E[y\: | \: x] - w^{*\top}x)^2] + \E[(\hat{w}^\top x - w^{*\top}x)^2].\end{equation} Combining equations (\ref{lem1}) and (\ref{g}) gives the desired result. 
+\end{proof}
+
+\section{Parameterized families of hypotheses}
+Linear models are one type of \textit{parameterized family} of hypotheses. In general, a parameterized family is given by a parameter space $\Theta$. For each $\theta\in\Theta$ there is a hypothesis $f_\theta(x)$, sometimes written $f(\theta; x)$. In this case we may write the loss function as $$\ell(f_\theta(x),y) = \ell((x,y),\theta).$$ In the special case of linear functions, our parameter space is $\Theta = \mathbb{R}^d$ and for $\theta \in \Theta$ we have $f_\theta(x) = \theta^\top x.$
+
+\subsection{Well-specified case and maximum likelihood}
+In the well-specified case, $P_\theta(y\: | \: x)$ is a family of distributions parameterized by $\theta\in\Theta$, and $y\: | \: x \sim P_{\theta^*}(y\: | \: x)$ is distributed according to some ground truth parameter $\theta^*$. We define the \textit{maximum likelihood} loss function by $$\ell((x,y),\theta) = -\log P_\theta(y\: | \: x),$$ so that minimizing the loss function is equivalent to maximizing the likelihood of the data.
+
+For example, suppose that $y\: | \: x$ is Gaussian distributed with mean $\theta^{*\top}x$ and variance $1$, i.e. $y\: | \: x \sim N(\theta^{*\top}x, 1)$. The likelihood is then
+\begin{align*}
+    \ell((x,y),\theta) &= -\log P_\theta(y\: | \:x) \\
+    &= -\log \exp\left(-\frac{(y-\theta^\top x)^2}{2}\right) + c \\
+    &= \frac{(y-\theta^\top x)^2}{2} + c
+\end{align*}
+where $c$ is the log of the normalizing constant. This computation shows that in the Gaussian setting, minimizing the squared loss actually recovers the MLE.
+
+\section{Training loss}
+Often we do not know the true underlying distribution $P$ with which to compute the expected loss. In these cases we need to use an approximation based on the data we do have. This motivates our definition of the \textit{training loss} $$\hat{L}(\theta) \defn \frac1n \sum_{i=1}^n \ell((x^{(i)},y^{(i)}),\theta).$$ In the special case of maximum likelihood, we have $\hat{L}(\theta) = -\frac1n \sum_{i=1}^n \log p_\theta(y^{(i)}\: | \:x^{(i)})$. We define the \textit{maximum likelihood estimator} $$\hat{\theta}_{\mathrm{MLE}} \in \mathrm{argmin}_{\theta\in\Theta} \hat{L}(\theta).$$ This approximation is ``good" in the sense that as $n\rightarrow\infty$, the minimizer of the training loss $\hat{\theta}_\mathrm{MLE}$ approaches the true maximum likelihood parameter $\theta^*$. The following theorem quantifies this fact.
+\begin{theorem}[Asymptotic of MLE] \label{mle}
+  Assume $\nabla^2 L(\theta^*)$ is full rank. Let $\hat{\theta} = \hat{\theta}_{\mathrm{MLE}}$ and $$Q \defn \E_{(x,y)\sim P}[\nabla_\theta(\log p_\theta(y\: | \: x))(\theta^*) \nabla_\theta(\log p_\theta(y\: | \: x)(\theta^*)^\top].$$
+  Assuming that $\hat{\theta}=\hat{\theta}_n\stackrel{\tiny p}{\rightarrow}\theta^\star$ (i.e. consistency) and under appropriate regularity conditions,  $$\sqrt{n}(\hat{\theta}-\theta^*)\stackrel{\tiny d}{\rightarrow} N(0, Q^{-1}) \textup{ and } n(L(\hat{\theta}) - L(\theta^*))\stackrel{\tiny d}{\rightarrow} \frac12 \chi^2(p).$$ as $n\rightarrow\infty$, where $p$ is the dimension of $\theta$ and $\chi^2(p)$ is the distribution of the sum of the squares of $p$ i.i.d. standard Gaussian random variables.
+\end{theorem}
+\begin{remark*}
+The matrix $Q$ referenced in Theorem \ref{mle} is known as the \textit{Fisher information matrix}.
+\end{remark*}
+\begin{cor}
+The first result of Theorem \ref{mle} implies that as $n\rightarrow\infty$, $\hat{\theta}-\theta^*\rightarrow 0$. The second result implies that $L(\hat{\theta}) - L(\theta^*) \approx p/2n$ since $\E[Z] \approx p$ when $Z\sim \chi^2(p)$.
+\end{cor}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

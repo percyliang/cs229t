@@ -1,0 +1,281 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+\setlength{\parindent}{0pt}
+
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+
+\usepackage{fullpage,enumitem,amsmath,amssymb,graphicx}
+% Some macros for your convenience
+\newcommand\bbR{\ensuremath{\mathbb{R}}} % Real numbers
+\newcommand\bbZ{\ensuremath{\mathbb{Z}}} % Integers
+\newcommand\bbE{\ensuremath{\mathbb{E}}} % Expectation
+\DeclareMathOperator*{\tr}{tr} % Trace
+\DeclareMathOperator*{\diag}{diag} % Diagonal matrix
+\DeclareMathOperator*{\sign}{sign} % Sign
+\DeclareMathOperator*{\var}{Var} % Variance
+\DeclareMathOperator*{\cov}{Cov} % Covariance
+\newcommand{\1}{\mathbb{I}} % Indicator
+
+
+\pagestyle{plain}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+% \draftnotice
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma
+\hfill
+Lecture 14
+\\
+Scribe: Shiori Sagawa
+\hfill
+November 7, 2018
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%
+%%% REVIEW AND OVERVIEW %%%
+%%%%%%%%%%%%%%%%%%%%
+\section{Review and Overview}
+In the last lecture, we introduced online learning. In online learning, a learner and environment interact as follows. In each iteration $t=1,...,T$:
+\begin{itemize}
+	\item Learner receives an input $x_t \in \mathcal{X}$ from the environment
+	\item Learner predicts $\hat{y}_t \in \mathcal{Y}$, based on $x_{1:t}, y_{1:t-1}$
+	\item Learner receives the true label $y_t \in \mathcal{Y}$ from the environment
+	\item Learner suffers loss $\ell(y_t, \hat{y}_t)$
+\end{itemize}
+To evaluate a learner, we compare against an optimal mapping $h: \mathcal{X} \mapsto \mathcal{Y}$. More concretely, we evaluate through regret:
+
+\begin{align*}
+\text{regret} \triangleq \sum_{t=1}^T\ell(y_t, \hat{y}_t) - \min_{h\in\mathcal{H}}\sum_{t=1}^T\ell(y_t, h(x_t))
+\end{align*}
+In this lecture, we introduce online convex optimization (OCO). We show that many online learning problems can be reduced to this framework, showing that we can solve such online learning problems by solving OCO. This motivates us to study algorithms for OCO. We then try out an intuitive algorithm for OCO called Follow the Leader (FTL), show that the algorithm can perform poorly through an example, and gain intuition on some features OCO algorithms should have. 
+%%%%%%%%%%%%%%%%%
+%%% OCO FRAMEWORK %%%
+%%%%%%%%%%%%%%%%%
+\section{Online Convex Optimization Framework}
+Below is the set-up of online convex optimization.\\\\
+In each iteration $t=1...T$:
+\begin{itemize}
+\item Player picks an action $\omega_t \in \Omega$, where $\Omega$ is a convex set
+\item Environment picks a convex function $f_t: \Omega \mapsto [0,1]$
+\item Player observes some information about $f_t$
+\end{itemize}
+We optimize $w_t$ to minimize regret:
+\begin{align*}
+\text{regret} \triangleq \sum_{t=1}^Tf_t(\omega_t) - \min_{\omega \in \Omega}\sum_{t=1}^T f_t(\omega)
+\end{align*}
+
+
+\section{Reduction of Online Learning Problems to OCO}
+In this section, we motivate our focus on OCO. Many interesting online learning problems can be reduced to OCO, and such problems can be solved by solving OCO. 
+\subsection{Online Linear Regression}
+\underline{Online learning formulation:}\\\\
+In each iteration $t=1...T$:
+\begin{itemize}
+\item Player receives $x_t \in \mathbb{R}^d$
+\item Environment selects $y_t$
+\item Player predicts $\hat{y}_t$
+\item Player receives $y_t$ from the environment
+\item Player suffers loss $\ell(y_t, \hat{y}_t) = (y_t - \hat{y}_t)^2$
+\end{itemize}
+\underline{Online convex optimization formulation:}\\\\
+In each iteration $t=1,...,T$:
+\begin{itemize}
+\item Player receives $x_t \in \mathbb{R}^d$ 
+\item Environment selects $y_t$. \\Equivalently, the environment specifies $f_t(w) = \ell(y_t, w^Tx_t) = (y_t - w^Tx_t)^2$.
+\item Player calls OCO to select $w_t \in \Omega = \mathbb{R}^d$, in turn predicting $\hat{y}_t = w_t^Tx_t$
+\item Player observes $y_t$, which is equivalent to observing $f_t$. 
+\end{itemize}
+\underline{Regret}\\\\
+Because $f_t$ in OCO is the loss function for the data at iteration $t$, regrets for online learning and OCO problems are equivalent. 
+\begin{align*}
+\sum_{t=1}^Tf_t(w_t) - \min_{w \in \Omega}\sum_{t=1}^T f_t(w)
+&= \sum_{t=1}^T\ell(y_t, w_t^Tx_t) - \min_{w \in \mathbb{R}^d}\sum_{t=1}^T\ell(y_t, w^Tx_t)\\
+&= \sum_{t=1}^T\ell(y_t, \hat{y}_t) - \min_{h\in\mathcal{H}}\sum_{t=1}^T\ell(y_t, h(x_t))
+\end{align*}
+\pagebreak
+%%% weather prediction aggregation %%%
+\subsection{Expert Problem}
+\underline{Online learning formulation:}\\\\
+In each iteration $t=1...T$:
+\begin{itemize}
+\item Player receives predictions from $N$ experts from the environment
+\item Environment specifies $N$ expert predictions' losses $\ell_t \in [0,1]^N$, where $\ell_t[i]$ is the loss of the expert $i$
+\item Player picks one expert to follow by drawing randomly from discrete distribution $p_t \in \{\Delta(N)\}$, where $\{\Delta(N)\} \triangleq \{p \in \mathbb{R}^N : ||p||_1=1, p\ge0\}$. In other words, $\{\Delta(N)\}$ is a set of all probability vectors in $\mathbb{R}^N$, where $i$th item ($p_t[i]$) is the probability of selecting expert $i$
+\item Player observes $\ell_t$
+\item Player suffers loss $\bbE_{i \sim p_t}[\ell_t[i]] = \langle\ell_t, p_t\rangle$
+\end{itemize}
+\underline{Online convex optimization formulation:}\\\\
+In each iteration $t=1,...,T$:
+\begin{itemize}
+\item Player receives predictions from $N$ experts from the environment
+\item Environment specifies $\ell_t$. Equivalently, the environment specifies $f_t(p) = \langle \ell_t, p \rangle$
+\item Player calls OCO to pick $p_t \in \Omega$, where $\Omega = \{\Delta(N)\}$. Once $p_t$ is selected, the player draws an expert from the distribution $p_t$ and follows the drawn expert.
+\item Player observes $\ell_t$, which is equivalent to observing $f_t$
+\end{itemize}
+\underline{Regret}\\\\
+Because $f_t$ in OCO is the loss function for the data at iteration $t$, regrets for online learning and OCO problems are equivalent. 
+\begin{align*}
+\sum_{t=1}^Tf_t(p_t) - \min_{p \in \Omega}\sum_{t=1}^T f_t(p)
+&= \sum_{t=1}^T\langle \ell_t, p_t \rangle - \min_{p  \in \{\Delta(N)\}}\sum_{t=1}^T\langle \ell_t, p \rangle\\
+&= \sum_{t=1}^T\langle \ell_t, p_t \rangle - \min_{i  \in \{1,...,N\}}\sum_{t=1}^T\ell_t[i] \qquad \text{(solution to a linear program is a vertex)}\\
+\end{align*}
+\pagebreak
+%% Sequential Investment
+\subsection{Sequential Investment}
+\underline{Set-Up:}\\\\
+Starting with capital $W_1$ in the first iteration, invest all of your capital across $N$ assets and collect returns at each iteration. \\\\
+\underline{Online learning formulation:}\\\\
+In each iteration $t=1...T$:
+\begin{itemize}
+\item Player selects $p_t \in \{\Delta N\}$ and invests $W_t p_t[i]$ to asset $i$ for each $i$
+\item Environment specifies the multiplicative return $\gamma_t \in \mathbb{R}^N$
+\item Player observes $\gamma_t$. 
+\item Player's capital is updated as $W_{t+1} = \sum_{i=1}^NW_tp_t[i]\gamma_t[i]$. \\Player suffers loss $\log(\frac{W_{t}}{W_{t+1}}) = -\log(\sum_{i=1}^Np_t[i]\gamma_t[i]) = -\log\langle p_t, \gamma_t \rangle$
+\end{itemize}
+\underline{Online convex optimization formulation:}\\\\
+In each iteration $t=1,...,T$:
+\begin{itemize}
+\item Player calls OCO to select $p_t \in \{\Delta N\}$ and invests $W_t p_t[i]$ to asset $i$ for each $i$
+\item Environment specifies the multiplicative return $\gamma_t$. Equivalently, the environment specifies $f_t(p) = \langle p, \gamma_t \rangle$. 
+\item Player observes $\gamma_t$, which is equivalent to observing $f_t$. 
+\end{itemize}
+\underline{Regret}\\\\
+Because $f_t$ in OCO is the loss function for the data at iteration $t$, regrets for online learning and OCO problems are equivalent. 
+\begin{align*}
+\sum_{t=1}^Tf_t(p_t) - \min_{p \in \Omega}\sum_{t=1}^T f_t(p)
+&= \sum_{t=1}^T\langle \gamma_t, p_t \rangle - \min_{p  \in \{\Delta(N)\}}\sum_{t=1}^T\langle \gamma_t, p \rangle\\
+&= \sum_{t=1}^T\langle \gamma_t, p_t \rangle - \min_{i  \in \{1,...,N\}}\sum_{t=1}^T\gamma_t[i] \qquad \text{(solution to a linear program is a vertex)}\\
+\end{align*}
+\pagebreak
+%%%%%%%%%%%%%%%
+%%% OCO SETTINGS %%%
+%%%%%%%%%%%%%%%
+\section{Settings and Variants of OCO Framework}
+There are multiple settings of the OCO framework. It can vary in the power of environment and observations. \\\\
+\textbf{Power of Environment}\\
+The environment can choose the $f_t$ with different levels of adversarialism and adaptivity.
+\begin{itemize}
+\item \underline{Stochastic setting}: $f_1, ..., f_T$ are i.i.d. samples from some distribution $P$. Under this setting, the environment is not adversarial.
+\item \underline{Oblivious setting}: $f_1, ..., f_T$ are selected before the game starts. Under this setting, the environment can be adversarial, but cannot be adaptive. 
+\item \underline{Non-oblivious/adaptive setting}: $\forall t, f_t$ can depend on $w_1, ..., w_t$. Under this setting, the environment can be adversarial and adaptive. Note that if the learner is deterministic, then the environment doesn't get more advantages moving from a oblivious setting to a non-oblivious setting.
+\end{itemize}
+\textbf{Power of Observations}\\
+Player can observe different amounts of information on $f_t$. 
+\begin{itemize}
+\item \underline{Full-information setting}: player observes the entire $f_t$ 
+\item \underline{Bandit setting}: player only observes $f_t(w_t)$ 
+\end{itemize}
+In the rest of the lecture, we focus on a oblivious, full-information setting.
+%%%%%%%%%%%%%%%%%
+%%% BATCH VS ONLINE  %%%
+%%%%%%%%%%%%%%%%%
+\section{Comparison of Online Learning and Batch Supervised Learning}
+Consider a batch supervised learning problem with convex loss function $\ell(\omega, z)$, where $\omega$ is a parameter and $z$ is a labeled data point. This problem can be reduced to OCO. In each iteration, the environment specifies $f_t(\omega) = \ell(\omega, z_t)$ (i.e. the environment is stochastic since $z_1, ..., z_T$ are drawn i.i.d. from $P_z$), and the player calls OCO to select a parameter $\omega_t$ and experiences loss $f_t(\omega_t)$. After all $T$ iterations, the learner aggregates $w_t$ into one parameter $\bar{\omega}$, for example by taking an average of $w_t$. The excess risk of such online algorithm can be bounded by the regret.\\\\
+\textbf{Theorem} (informal):\\ Let $\bar{\omega}$ be the parameter selected by the above online learning algorithm and let $L(\omega) = \bbE[\ell(\omega, z)]$ be the expected loss for $\omega$. 
+\begin{align*}
+L(\bar{\omega}) - L(\omega^*) \le \frac{\text{regret}}{T}
+\end{align*}
+\\
+There are two key takeaways from the reduction and the above theorem.
+\begin{enumerate}
+\item Online learning is harder than batch supervised learning. 
+\item We now have a sense of what regret bound to aim for. Because the excess risk is typically bounded by $O(\frac{1}{\sqrt{T}})$, the regret should be able to be bounded by $O(\sqrt{T})$.
+\end{enumerate}
+%%%%%%%%%
+%%%  FTL  %%%
+%%%%%%%%%
+\section{Follow the Leader (FTL) algorithm}
+So far, we have shown that solving OCO is sufficient to solve many online learning problems. We now will be designing algorithms for OCO, particularly for the oblivious setting. As a starting point, we will try out an intuitive algorithm called the Follow the Leader (FTL) algorithm. As we show that the algorithm can perform poorly through an example, we will get an intuition for how we can improve it. \\\\
+% General algorithm
+\textbf{Follow the Leader (FTL) Algorithm} \\
+At high level, FTL selects an action $\omega_t$ that minimizes the cumulative loss so far (in iterations $1, ..., t-1$). More concretely, at each iteration $t$, we select the following $\omega_t$:
+\begin{align*}
+\omega_t = \text{argmin}_{\omega \in \Omega}\sum_{i=1}^{t-1}{f_{i}(\omega)}
+\end{align*}
+\textbf{Example: Expert Problem}\\
+Applying the FTL algorithm to the expert problem (see section 3.2), the learner selects an expert $j_t$ that has the smallest cumulative loss so far.
+\begin{align*}
+p_t &= \text{argmin}_{p \in \Omega}\sum_{i=1}^{t-1}{f_{i}(p)}\\
+&= \text{argmin}_{p \in \Omega}\sum_{i=1}^{t-1}{\langle \ell_t, p\rangle}\\
+j_t &= \text{argmin}_{j \in \{1,...,N\}}\sum_{i=1}^{t-1}{\ell_t[j]} \qquad \text{(solution to a linear program is a vertex)}
+\end{align*}
+In cases when the FTL algorithm doesn't specify the leader to follow (i.e. at $t=1$ and when there are ties), the learner picks an expert with the lowest index. \\\\
+We now show that the above algorithm can perform poorly, showing that there is a sequence of losses where the worst-case regret is obtained. Let $N=2$ and design the $\ell_t$ as follows:
+\begin{align*}
+\ell_t = \begin{cases} 
+ 	     1 & t \text{ is odd} \\
+ 	     0 & t \text{ is even} \\
+ 	  \end{cases}
+\end{align*}
+Following the FTL algorithm, we would get the following $p_t$:
+\begin{align*}
+p_t = \begin{cases} 
+ 	     1 & t \text{ is odd} \\
+ 	     0 & t \text{ is even} \\
+ 	  \end{cases}
+\end{align*}
+\begin{table}[htb]
+\centering
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+         & $\ell_1$ & $\ell_2$ & $\ell_3$ & ... & $\ell_t$ \\ \hline
+Expert 1 & 1 & 0 & 1 &     &   \\ \hline
+Expert 2 & 0 & 1 & 0 &     &   \\ \hline
+\end{tabular}
+\quad
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+         & $p_1$ & $p_2$ & $p_3$ & ... & $p_t$ \\ \hline
+Expert 1 & 1 & 0 & 1 &     &   \\ \hline
+Expert 2 & 0 & 1 & 0 &     &   \\ \hline
+\end{tabular}
+\end{table}
+
+Computing the regret under this setting:
+\begin{align*}
+\text{regret} 
+&=\sum_{t=1}^Tf_t(p_t) - \min_{p \in \Omega}\sum_{t=1}^T f_t(p)\\
+&= \sum_{t=1}^T\langle \ell_t, p_t \rangle - \min_{i  \in \{1,...,N\}}\sum_{t=1}^T\ell_t[i] \\
+&= \sum_{t=1}^T 1 - \min_{i  \in \{1,...,N\}}\sum_{t=1}^T\ell_t[1] \\
+&= \frac{T}{2}
+\end{align*}
+The algorithm is performing poorly, getting the worst possible regret. We also notice that the regret is worse than our goal for the regret bound, which is $O(\sqrt{T})$. \\\\
+\textbf{Improving the Algorithm}\\
+How can we improve the algorithm? We identify two shortcomings of the FTL algorithm and propose to fix them.
+\begin{enumerate}
+\item If the algorithm is deterministic, then the environment can simulate the algorithm and provide adversarial $f_t$. Randomness should be added to the algorithm.
+\item We saw that frequently switching the selected expert hurt the performance. The algorithm should be more conservative about switching. 
+\end{enumerate}
+\end{document}

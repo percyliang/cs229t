@@ -1,0 +1,449 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{1em}
+
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+\usepackage{amsmath,amsfonts,amsthm,amssymb}
+\DeclareMathOperator*{\E}{\mathbb{E}}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{defn}{Definition}
+
+\pagestyle{plain}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+% \draftnotice
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture \#6               %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Jay Whang and Patrick Cho                  %%% FILL IN YOUR NAME HERE
+\hfill
+October 10, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Review and Overview}
+
+Recall in the last lecture that for any family of scalar functions $\mathcal{F}$, we have
+	
+\begin{equation}  \label{eq:1}
+\E_{z_1,...,z_n \sim p} \left[ \sup_{f\in \mathcal{F}} \left( \frac{1}{n} \sum_{i=1}^n f(z_i) - \E_{z \sim p}[f(z)] \right) \right] \leq 2\mathcal{R}_n(\mathcal{F}) 
+\end{equation}
+
+where
+
+\begin{equation}
+\mathcal{R}_n(\mathcal{F}) \triangleq \E_{z_1,...z_n \sim p} \left[ \E_{\substack{\sigma_i \sim \{-1,1\}\\i=1,...,n}} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^n \sigma_i f(z_i) \right] \right]
+\end{equation}
+
+Let us define a family of functions, $\mathcal{F}$, that depends on loss function $\ell$ and hypothesis class $\mathcal{H}$ in the following manner
+
+\begin{equation}  \label{eq:3}
+\mathcal{F} = \{ z=(x,y) \mapsto \ell((x,y),h) : h \in \mathcal{H} \}
+\end{equation}
+
+Then, we have
+
+\begin{equation}
+\E_{z_1,...,z_n} \left[ \sup_{h\in \mathcal{H}} \left| \hat{L}(h) - L(h) \right| \right] \leq 4\mathcal{R}_n(\mathcal{F}) 
+\end{equation}
+
+where the multiple of 2 comes from applying equation \eqref{eq:1} twice - once with the original loss function and another with the negative of the original loss function.
+
+In this lecture, we will try to prove the corresponding high probability bound. In particular, we will see that this bound does not depend on the complexity of hypothesis class $\mathcal{H}$. We will also see this bound applied on two specific loss functions - hinge loss and 0-1 loss. Using Talagrand's lemma, we will see that the bound for these two loss functions no longer depend on the loss function.
+
+\section{Preliminaries}
+\begin{defn}
+Let $S=\{z_1,...,z_n\}$ be a set of i.i.d. examples from some distribution $p$.
+
+The \textbf{empirical Rademacher complexity} $\mathcal{R}_S(\mathcal{F})$ is defined as:
+
+\begin{equation}
+\mathcal{R}_S(\mathcal{F}) \triangleq \E_{\substack{\sigma_i \sim \{-1,1\}\\i=1,...,n}} \left[ \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \sum_{i=1}^n \sigma_i f(z_i) \right) \right]
+\end{equation}
+\end{defn}
+
+Comparing the definitions of $\mathcal{R}_n(\mathcal{F})$ and $\mathcal{R}_s(\mathcal{F})$, we have
+\begin{equation}
+\mathcal{R}_n(\mathcal{F}) = \E_{z_1,...,z_n \sim p}\left[\mathcal{R}_s(\mathcal{F})\right]
+\end{equation}
+
+\begin{defn}
+A function $f:\mathbb{R}^n \to \mathbb{R}$ satisfies
+the \textbf{bounded difference condition} if
+$$\exists~c_1,...c_n \geq 0 \text{  such that} $$
+$$\left| f(x_1,...,x_i,...,x_n) - f(x_1,...,x_i',...,x_n) \right| \leq c_i \,\,\, \forall i, x_1,...,x_n, x_i'$$
+\end{defn}
+
+
+\begin{theorem}[McDiarmid's Inequality]
+Let $f:\mathbb{R}^n \to \mathbb{R}$ satisfy the bounded difference condition. Let $x_1,...,x_n$ be independent random variables. Then,
+\begin{equation}
+\Pr\left[ f(x_1,...x_n) - \E\left[f(x_1,...,x_n)\right] \geq \varepsilon \right] \leq \exp{\left(-\frac{2\varepsilon^{2}}{\sum_{i=1}^n c_i^2}\right)}
+\end{equation}
+\end{theorem}
+
+Comparing McDiarmid's Inequality to other concentration inequalities such as Hoeffding's Inequality, we realize that the function is no longer a summation of $x_1,\ldots,x_n$.
+
+\section{High Probability Bounds}
+
+\begin{lemma}
+Let $\ell(z,h) \in [-1,1]$. Then, w.p. $\geq 1 - \delta$,
+\begin{equation}
+    \mathcal{R}_s(\mathcal{F}) - \mathcal{R}_n(\mathcal{F}) \leq \sqrt{\frac{2\log{\frac{1}{\delta}}}{n}}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Let 
+\begin{equation}
+    g(z_1,...z_n) = \mathcal{R}_s(\mathcal{F}) = \E_{\sigma} \left[ \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \sum_{i=1}^n \sigma_i f(z_i) \right) \right]
+\end{equation}
+
+Then, we have
+
+\begin{align*}
+    &\left| g(z_1,...,z_i,...z_n) - g(z_1,...,z_i',...z_n) \right| \\
+    &= \E_{\sigma} \left[ \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \sum_{j=1}^{n} \sigma_j f(z_j) \right) - \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \sum_{j=1}^n \sigma_j f(z_j)  - \sigma_i f(z_i) + \sigma_i f(z_i') \right) \right] \\
+    &\leq \E_{\sigma} \left[ \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \sum_{j=1}^n \sigma_j f(z_j) \right) - \sup_{f \in \mathcal{F}}  \left( \frac{1}{n} \sum_{j=1}^n \sigma_j f(z_j) \right) + \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \left| \sigma_i f(z_i) - \sigma_i f(z_i') \right| \right) \right]\\
+    &= \E_{\sigma} \left[ \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \left| \sigma_i f(z_i) - \sigma_i f(z_i') \right| \right) \right]\\
+    &\leq \frac{2}{n}\\
+\end{align*}
+
+where we use in order: definition of $g$, $\sup(A) \leq \sup(A-B) + \sup|B|$, cancellation of terms, $f \in [-1,1]$.
+
+Therefore, setting $c_i = \frac{2}{n}$ and applying McDiarmid's Inequality, we have
+
+\begin{align*}
+\Pr\left[ g - \E_{z_1,...z_n \sim p}[g] \geq \varepsilon \right] 
+&= \Pr\left[ \mathcal{R}_s(\mathcal{F}) - \mathcal{R}_n(\mathcal{F}) \geq \varepsilon \right]\\
+&\leq \exp{\left( - \frac{2\varepsilon^2}{\sum_{i=1}^n c_i^2} \right)}\\
+&= \exp{\left( - \frac{2\varepsilon^2}{\frac{4}{n}} \right)}\\
+&= \exp{\left( - \frac{n\varepsilon^2}{2} \right)}\\
+&= \delta\\
+\end{align*}
+
+This is achieved by setting
+
+\[ \varepsilon = \sqrt{\frac{2\log{\frac{1}{\delta}}}{n}} \qedhere\] 
+\end{proof}
+
+So, w.p. $1-\delta$, we have
+
+\begin{equation} \label{eq:10}
+    \mathcal{R}_s(\mathcal{F}) - \mathcal{R}_n(\mathcal{F}) \leq \sqrt{\frac{2\log{\frac{1}{\delta}}}{n}}
+\end{equation}
+
+\begin{theorem}
+  \label{theorem:concentration}
+Let $\ell(z,h) \in [-1,1]$. Then, w.p. $\geq 1 - \delta$,
+\begin{equation}
+    \left| \E_{z_1,...z_n \sim p} \left[\sup_{h\in\mathcal{H}} \hat{L}(h)-L(h)\right] -
+        \sup_{h\in\mathcal{H}} \hat{L}(h)-L(h)
+    \right| \le \sqrt{\frac{2\log (2/\delta)}{n}}
+\end{equation}
+\end{theorem}
+
+{\bf Remark:} Note that in the lecture, we showed a variant of this theorem:
+$$
+\left| \E_{z_1,...z_n \sim p} \left[\sup_{h\in\mathcal{H}} |\hat{L}(h)-L(h)|\right] -
+\sup_{h\in\mathcal{H}} |\hat{L}(h)-L(h)|
+\right| \le \sqrt{\frac{2\log (2/\delta)}{n}}
+$$
+\sloppy The inequality above is indeed true and can be proved with the same technique as below. However, it's a bit less convenient to deal with the absolute value in $ \E_{z_1,...z_n \sim p} \left[\sup_{h\in\mathcal{H}} |\hat{L}(h)-L(h)|\right]
+$ when we trying to bound it from above. 
+
+
+
+\begin{proof}
+Define $g(z_1,\ldots,z_n) = \sup\limits_{h\in\mathcal{H}} \frac{1}{n}\sum \ell(z_i,h) - L(h)$.
+
+For notational simplicity, write
+$A = \hat{L}(h) - L(h) = \left(\frac{1}{n}\sum \ell(z_i,h)\right) - L(h)$
+and $B = \frac{1}{n}(\ell(z_i,h)- \ell(z_i',h))$.
+Then $g(z_1,\ldots,z_n) = \sup\limits_{h\in\mathcal{H}}A$
+and $g(z_1,\ldots,z_i',\ldots,z_n) = \sup\limits_{h\in\mathcal{H}}(A-B)$.
+
+% Using the property $\sup |x| \le |\sup x| + |\sup (-x)|$, we get
+Then,
+\begin{align*}
+    |g(z_1,\ldots,z_i,\ldots,z_n) 
+    &- g(z_1,\ldots,z_i',\ldots,z_n)| \\
+    % &= \left|
+    % \sup\limits_{h\in\mathcal{H}} \left|A - L(h)\right| - \sup\limits_{h\in\mathcal{H}}
+    % \left|A + \frac{1}{n}(\ell(z_i',h)- \ell(z_i,h)) -L(h)\right|
+    % \right|
+    % aaa
+    % aaa
+    &= 
+    \left| \sup\limits_{h\in\mathcal{H}} (A) - \sup\limits_{h\in\mathcal{H}} (A-B) \right| \\
+    & \le    \sup_{h\in H}\left|    A-(A-B)    \right|  && \text{$\sup$ is a contraction} \\
+    & \le \sup_{h\in H}|B| \\
+    &= \sup_{h\in H}\left|\frac{1}{n}(\ell(z_i,h)- \ell(z_i',h))\right| \\
+    % &= \frac{1}{n}\left|(\ell(z_i,h)- \ell(z_i',h)\right| \\
+    & \le \frac{2}{n} && \text{$\ell \in [-1,1]$}
+\end{align*}
+
+Thus, $g$ satisfies the bounded difference condition.
+Applying McDiarmid's Inequality on $g$ with $c_i = \frac{2}{n}$, we get:
+\begin{align*}
+\Pr&\left[\sup\limits_{h\in\mathcal{H}} \hat{L}(h) - L(h)  - \E_{z_1,...z_n \sim p}\left[\sup\limits_{h\in\mathcal{H}} \hat{L}(h) - L(h)\right] \right] \\
+&= 
+\Pr\left[g(z_1,\ldots,z_n) - \E g(z_1,\ldots,z_n) \ge \varepsilon\right] \\
+& \le \exp\left(-\frac{2\varepsilon^2}{\sum c_i^2}\right)
+= \exp\left(\frac{-n\varepsilon^2}{2}\right)
+\end{align*}
+
+Finally, applying this to $g$ and $-g$, and solving for $\varepsilon$ gives: w.p $1-\delta$,
+$$\left|\sup\limits_{h\in\mathcal{H}} \hat{L}(h) - L(h) - \E_{z_1,...z_n \sim p}\left[\sup\limits_{h\in\mathcal{H}} \hat{L}(h) - L(h)\right] \right|
+\le \sqrt{\frac{2\log(2/\delta)}{n}}
+$$
+
+\end{proof}
+
+\section{Bounding the excess risk}
+Theorem~\ref{theorem:concentration}, combined with the symmetrization argument, gives a high probability bound on the excess risk in terms of the Rademacher complexity and the concentration level. We state this formally in the following theorem.
+\begin{theorem}
+  Let $\ell(z,h)\in[-1,1]$ for all $h\in H$ and $F=\{z\mapsto \ell(z,h):h\in H\}$ be the loss class. Then we have with probability at least $1-\delta$ the excess risk bound
+  \begin{equation}
+    L(\hat{h}) - L(h^*) \le 4R_n(F) + + 2\sqrt{\frac{2\log(4/\delta)}{n}}.
+  \end{equation}
+\end{theorem}
+
+{\bf Remark 1: } The constant 4 can be improved if we sacrifice the constant in front of $\sqrt{\frac{\log(4/\delta)}{n}}$ because in the proof below, for $h^*$ we don't have to use a uniform convergence result. We can directly apply Hoeffding inequality on $L(h^*) - \hat{L}(h^*)$. Although in general for the purpose of this class we don't care much about absolute constant dependency. 
+
+{\bf Remark 2: } The proof below is slightly different from the proof given in the lecture. Here we go through $ \E_{z_1,...z_n \sim p} \left[\sup_{h\in\mathcal{H}} \hat{L}(h)-L(h)\right]
+$  and $ \E_{z_1,...z_n \sim p} \left[\sup_{h\in\mathcal{H}} -\hat{L}(h)+L(h)\right]
+$ instead of $ \E_{z_1,...z_n \sim p} \left[\sup_{h\in\mathcal{H}} |\hat{L}(h)-L(h)|\right]
+$ in the lecture. To some extent, the reason why this is easier is that we no longer use the absolute value inside the sup. 
+\begin{proof}
+  We have
+  \begin{align*}
+    & \quad L(\hat{h}) - L(h^*) = L(\hat{h}) - \hat{L}(\hat{h}) + \underbrace{\hat{L}(\hat{h}) - \hat{L}(h^*)}_{\le 0} + \hat{L}(h^*) - L(h^*) \\
+    & \le \underbrace{\sup_{h\in H}L(h) - \hat{L}(h)}_{\rm I} +
+      \underbrace{\sup_{h\in H}\hat{L}(h) - L(h)}_{\rm II}. 
+  \end{align*}
+  For term II, applying Theorem~\ref{theorem:concentration} and standard symmetrization argument, we get that with probability at least $1-\delta/2$,
+  \begin{equation*}
+    \sup_{h\in H}\hat{L}(h) - L(h) \le \E\left[\sup_{h\in H}\hat{L}(h) - L(h)\right] + \sqrt{\frac{2\log(4/\delta)}{n}} \le 2R_n(F) + \sqrt{\frac{2\log(4/\delta)}{n}}.
+  \end{equation*}
+  For term I, the same argument with losses $-\ell(z,h)$ gives that with probability at least $1-\delta/2$,
+  \begin{equation*}
+    \sup_{h\in H}L(h) - \hat{L}(h) \le \E\left[\sup_{h\in H}L(h) - \hat{L}(h)\right] + \sqrt{\frac{2\log(4/\delta)}{n}} \le 2R_n(F^-) + \sqrt{\frac{2\log(4/\delta)}{n}},
+  \end{equation*}
+  where $F^-=\{-f:f\in F\}$ is the negative loss class.
+  By the union bound, the above two events happen together with
+  probability at least $1-\delta$. Further noticing that
+  $R_n(F^-)=R_n(F)$ (as
+  $\sigma_if(z_i)\stackrel{d}{=}\sigma_i(-f(z_i))$, we obtain the
+  desired result.
+\end{proof}
+
+% From definitions, we have
+
+% \begin{equation} \label{eq:11}
+%     \mathcal{R}_s(\mathcal{F}) - \mathcal{R}_n(\mathcal{F}) = \E_{\sigma} \left[ \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \sum_{i=1}^n \sigma_i f(z_i) \right) \right] - \E_{z_1,...z_n \sim p} \left[ \E_{\sigma} \left[ \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \sum_{i=1}^n \sigma_i f(z_i) \right) \right] \right]
+% \end{equation}
+
+% Substituting \eqref{eq:11} into \eqref{eq:10}, we have
+
+% \begin{equation}
+%      \E_{\sigma} \left[ \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \sum_{i=1}^n \sigma_i f(z_i) \right) \right] - \E_{z_1,...z_n \sim p} \left[ \E_{\sigma} \left[ \sup_{f \in \mathcal{F}} \left( \frac{1}{n} \sum_{i=1}^n \sigma_i f(z_i) \right) \right] \right] \leq 2\sqrt{\frac{\log{\frac{1}{\delta}}}{n}}
+% \end{equation}
+
+% Similar to before, we define the function class $\mathcal{F}$ according to \eqref{eq:3}. Therefore,
+
+% \begin{equation}
+%      \E_{\sigma} \left[ \sup_{h \in \mathcal{H}} \left( \frac{1}{n} \sum_{i=1}^n \sigma_i l(z_i,h) \right) \right] - \E_{z_1,...z_n \sim p} \left[ \E_{\sigma} \left[ \sup_{h \in \mathcal{H}} \left( \frac{1}{n} \sum_{i=1}^n \sigma_i l(z_i,h) \right) \right] \right] \leq 2\sqrt{\frac{\log{\frac{1}{\delta}}}{n}}
+% \end{equation}
+
+% \begin{equation}
+%      \E_{\sigma} \left[ \hat{L}(h) \right] \leq 2\sqrt{\frac{\log{\frac{1}{\delta}}}{n}}
+% \end{equation}
+
+% \begin{equation}
+%      \sup_{h \in \mathcal{H}} \left( \frac{1}{n} \sum_{i=1}^n l(z_i,h) \right) - \sup_{h \in \mathcal{H}} \left( \frac{1}{n} \sum_{i=1}^n \sigma_i f(z_i) \right) \leq 2\sqrt{\frac{\log{\frac{1}{\delta}}}{n}}
+% \end{equation}
+
+% \begin{equation}
+% \E_{z_1,...,z_n} \left[ \sup_{h\in \mathcal{H}} \left| \hat{L}(h) - L(h) \right| \right] \leq 4\mathcal{R}_n(\mathcal{F}) 
+% \end{equation}
+
+% Since, w.p. $1-\delta$, we have
+
+
+
+% w.p. $1-\delta$, we also have
+
+% \begin{equation}
+% \E_{z_1,...,z_n} \left[ \sup_{h\in \mathcal{H}} \left| \hat{L}(h) - L(h) \right| \right] \leq 4\mathcal{R}_n(\mathcal{F}) 
+% \end{equation}
+
+% \begin{equation}
+%     \left| \E_{z} \left[ \sup_{h \in \mathcal{H}} \left| \hat{L}(h) - L(h) \right| \right] - \sup_{h \in \mathcal{H}} \left| \hat{L}(h) - L(h)\right|  \right| \leq 2\sqrt{\frac{\log{\frac{4}{\delta}}}{n}}
+% \end{equation}
+
+
+% \begin{theorem}
+% If $\ell \in [-1,1]$, w.p. $ \geq 1-\delta$,
+% \begin{equation}
+% \sup_{h \in \mathcal{H}} \left| \hat{L}(h) - L(h^*) \right| \leq \mathcal{R}_s(\mathcal{F}) + \sqrt{\frac{\log{\frac{2}{n}}}{n}}
+% \end{equation}
+% \begin{equation}
+% L(\hat{h}) - L(h^*) \leq \mathcal{R}_s(\mathcal{F}) + \sqrt{\frac{\log{\frac{2}{n}}}{n}}
+% \end{equation}
+% \end{theorem}
+
+
+\section{Geometric Viewpoint of Rademacher Complexity}
+
+Let $Q=\{(f(z_1),...,f(z_n)): f \in \mathcal{F}\} \subseteq \mathbb{R}^m$. We can think of each element of the set $Q$ as the a vector of losses calculated for a single hypothesis in the hypothesis class $\mathcal{H}$. Then,
+
+\begin{equation}
+\mathcal{R}_s(\mathcal{F}) = \E_{\sigma} \sup_{v \in Q} \frac{1}{n} \left<v,\sigma\right>
+\end{equation}
+
+From this viewpoint, the complexity of the set Q can be viewed as the following process. Firstly, pick a random $\sigma \in \mathbb{R}^n$ where $\sigma_i \in \{-1,1\}$. Then, we pick the largest point $v$ in the set Q that maximizes the dot product between $v$ and $\sigma$. Finally, we take an expectation over $\sigma$.
+
+In particular, let us fix a loss function $\ell$ and a dataset $(z_1,...z_n)$. Given this loss function, if the hypothesis class $\mathcal{H}$ results in the vector of losses pointing in the same direction, then the Rademacher complexity is low. This is because when taking the $\sup$ over elements in the set $Q$, it is difficult to find one that has a small cosine distance (or large dot product). On the other hand, if the hypothesis class $\mathcal{H}$ allows the vector of losses to point in many different directions, then the Rademacher complexity is high.
+
+\section{Talagrand's Lemma}
+
+This lemma is also known as \emph{contraction principle} and \emph{Lipschitz composition}.
+
+\begin{lemma}[Contraction principle]
+Let $\phi:\mathbb{R}\mapsto\mathbb{R}$ be a $k$-Lipschitz function, then
+\begin{equation}
+    \mathcal{R}_s(\phi \circ \mathcal{H}) \leq k\cdot \mathcal{R}_s(\mathcal{H}),
+\end{equation}
+where $\phi\circ\mathcal{H} = \{z \mapsto \phi(h(z)):h \in \mathcal{H}\}$.
+\end{lemma}
+
+\section{Moving from $\mathcal{R}_s(\mathcal{F}) \text{ to } \mathcal{R}_s(\mathcal{H})$}
+
+Consider a family of loss functions $\mathcal{F} = \{ z \mapsto \ell((x,y),h):h\in\mathcal{H}\}$ where $\ell((x,y),h)$ can be expressed as
+
+\[ \ell((x,y),h) = \ell(h(x),y)\]
+
+Then, we can use Talagrand's lemma to remove the influence of the loss function. Concretely, instead of the Rademacher complexity of the family of functions $\mathcal{F}$, we can derive a bound that depends on the Rademacher complexity of the hypothesis class $\mathcal{H}$. To be concrete, let us consider binary classification where $y_i \sim \{-1,+1\}$ together with two losses - hinge loss and binary loss.
+
+\subsection{Hinge Loss}
+
+For hinge loss, we have
+
+\[ \ell(z,h) = \max{(0,1-y_{i}h(x_i))}\]
+
+The hinge loss is 1-lipschitz. Let us define $\phi(t) = \max{(0,1-t)}$. Then, we have
+
+\begin{align*}
+    \mathcal{R}_s(\mathcal{F}) &= \E_{\sigma} \sup_{h \in \mathcal{H}} \frac{1}{n} \sum_{i=1}^n \sigma_i \phi(y_{i}h(x_i)) \\
+    &\leq \E_{\sigma} \sup_{h \in \mathcal{H}} \frac{1}{n} \sum_{i=1}^n \sigma_{i} y_{i} h(x_i) \\
+    &= \E_{\sigma} \sup_{h \in \mathcal{H}} \frac{1}{n} \sum_{i=1}^n \sigma_{i} h(x_i) \\
+    &= \mathcal{R}(\mathcal{H})
+\end{align*}
+
+where the inequality holds true because $\mathcal{F} = \phi \circ \mathcal{H}'$ and by Talagrand, we have
+
+\[ \mathcal{R}_s(\mathcal{F}) \leq k\mathcal{R}_s(\mathcal{H}') \]
+
+where $\mathcal{H}' = \{ z \mapsto yh(x) : h \in \mathcal{H}\}$. Since hinge loss is 1-lipschitz, $k=1$.
+
+In the third step of the derivation, we can remove $y_i$ because $\sigma_{i}$ and $\sigma_{i}y_i$ come from the same distribution.
+
+\subsection{Binary Loss}
+
+Since binary loss is not Lipschitz, we use margin theory to upper bound the binary loss. We define the following $\gamma$-margin loss for $\gamma > 0$
+\[
+    \ell_{\gamma}(t)= 
+\begin{cases}
+    0,& \text{if } t\geq \gamma\\
+    1,& \text{if } t\leq 0\\
+    1 - \frac{t}{\gamma},& \text{otherwise}
+\end{cases}
+\]
+
+Also let
+$$\ell_{\gamma}((x,y),h) = \ell_{\gamma}(yh(x))$$
+$$\mathcal{F}_\gamma = \{(x,y) \mapsto \ell_\gamma(yh(x))\}$$
+with $L_{\gamma}$ and $\hat{L}_{\gamma}$ defined accordingly.
+
+We desire to give an upper bound on the expected binary loss. We give this bound by first giving bounds for the following three terms: $L(h)$, $\hat{L}_{\gamma}(h)$ and $|\hat{L}_{\gamma}(h) - L_{\gamma}(h)|$.
+
+Firstly, notice that $\ell_{\gamma}$ upper-bounds the binary loss as shown below:
+
+\begin{equation} \label{eq:14}
+L(h) = \E\left[\mathbf{1}\left[yh(x)<0\right]\right] \leq \E\left[l_{\gamma}((x,y),h)\right] = L_{\gamma}(h)
+\end{equation}
+
+Secondly, we bound $\hat{L}_{\gamma}(h)$ by the training loss w.r.t a margin. Intuitively, the training loss w.r.t. a margin  means that a point is considered to be classified wrongly ($\ell=1$) even if it is on the correct side of the decision boundary if the point is within $\gamma$ of the margin.
+
+\begin{equation} \label{eq:15}
+    \hat{L}_{\gamma}(h) = \frac{1}{n} \sum_{i=1}^{n} \ell_{\gamma}(y_{i}h(x_i)) \leq \frac{1}{n} \sum_{i=1}^n \mathbf{1}\left[y_{i}h(x_i) \leq \gamma \right]
+\end{equation}
+
+Lastly, we bound the generalization error of $\gamma$-margin loss: w.p $\ge 1-\delta$,
+\begin{align*}
+    \forall h,~
+    \left|
+    \hat{L}_\gamma(h) - L_\gamma(h)
+    \right|
+    &\lesssim \mathcal{R}_S(\mathcal{F}_\gamma) + \sqrt{\frac{\log (2/\delta)}{n}} \\
+    &\lesssim \frac{1}{\gamma}
+    \mathcal{R}_S(\mathcal{H}) + \sqrt{\frac{\log (2/\delta)}{n}} && \text{by Talagrand's Lemma}
+\end{align*}
+In particular, this implies the following:
+\begin{equation} \label{eq:16}
+L_\gamma(h) \lesssim \hat{L}_\gamma(h)
++ \frac{1}{\gamma} \mathcal{R}_S(\mathcal{H})
++ \sqrt{\frac{\log (2/\delta)}{n}}
+\end{equation}
+
+Combining inequalities \eqref{eq:14}, \eqref{eq:15} and \eqref{eq:16}, we obtain:
+\begin{equation}
+L(h) \le \hat{L}_\gamma(h)
++ O\left(\frac{\mathcal{R}_S(\mathcal{H})}{\gamma} + \sqrt{\frac{\log (2/\delta)}{n}}\right)
+\end{equation}
+
+Notice that the above inequality suggests a tradeoff in the choice of $\gamma$. For a large $\gamma$, the training loss w.r.t. a margin increases but the term on the right decreases and vice versa.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
