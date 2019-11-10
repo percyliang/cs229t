@@ -1,0 +1,222 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+
+\usepackage[shortlabels]{enumitem}
+\usepackage[italicdiff]{physics}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{cancel}
+\mathtoolsset{showonlyrefs}
+
+
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+
+\DeclareMathOperator*{\E}{\mathbb E}
+
+\let\mc\mathcal
+\let\eps\varepsilon
+\newcommand\R{\mathbb R}
+
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+
+\pagestyle{plain}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+% \draftnotice
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture \#7               %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Brian Zhang                  %%% FILL IN YOUR NAME HERE
+\hfill
+October 15, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Review and Overview}
+
+We will first give a brief review of what has been covered so far.
+
+In the first few lectures, we stated and proved asymptotics on the maximum likelihood estimator. In particular, in the well-specified case, we showed that 
+\begin{align}
+L(\hat h) - L(h^*) \le \frac{p}{2n} + o\qty(\frac 1n)
+\end{align}
+where $\hat h$ is the empirical MLE, $h^*$ is the ground truth function, $p$ is the number of parameters in the model, $n$ is the number of training examples, and $L$ is the expected negative log likelihood (test error).
+
+We then transitioned to non-asymptotics results, and simultaneously we dropped the assumption of well-specificity. We first observed that 
+\begin{align}\label{unif-convergence}
+L(\hat h) - L(h^*) \le 2 \sup_h \abs{\hat L(h) - L(h)}
+\end{align}
+which allows us to use uniform convergence results to establish bounds on the generalization error. Our attention thus turned to bounding the right hand side of the above equation.
+
+In the case of a finite hypothesis class $H$, using Hoeffding's inequality and then a union bound, we showed that, with probability at least $1 - \delta$, 
+\begin{align}
+\sup_h \abs{\hat L(h) - L(h)} \lesssim \sqrt{\frac{\log \abs{H} + \log(2/\delta)}{n}}.
+\end{align}
+In the case of an infinite hypothesis class $H$ parametrized by a bounded parameter $\theta \in \R^p$, we concluded that, with probability $1 - O\qty(p^{-10})$,
+\begin{align}
+\sup_h \abs{\hat L(h) - L(h)} \lesssim \sqrt{\frac{p \log n}{n}}
+\end{align}
+as long as the loss functions are sufficiently nice (Lipschitz and bounded).
+
+Last week, we defined the notion of Rademacher complexity and used it to simplify our discussion of uniform convergence bounds. In particular, we saw that 
+\begin{align}
+\sup_h \abs{\hat L(h) - L(h)} \lesssim R_S(F) + \sqrt{\frac{\log(2/\delta)}{n}}
+\end{align}
+where $R_S(F)$ is the sample Rademacher complexity on a sample $S$ of size $n$, and $F$ is a family of loss functions. We note that $R_S(F)$ can be replaced with the expected Rademacher complexity $R_n(F) = \E R_S(F)$, but that it is usually easier to reason about $R_S(F)$ because there is one fewer expectation to worry about.  If we use the $\gamma$-margin loss, then 
+\begin{align}
+R_S(F) \le \frac{R_S(H)}{\gamma}.
+\end{align}
+In this lecture, we will focus on bounding $R_S(H)$, which by Talagrand's Lemma and the above discussion will lead to bounds on $L(\hat h) - L(h^*)$. We will start with the case of a linear function with bounded parameter, and move to the more general setting of a neural network with a single hidden layer. We note that focusing on $R_S(H)$ instead of $R_S(F)$ carries another advantage: it allows us to ignore the labels and look at only the inputs, which often simplifies the analysis.
+\section{Rademacher Complexity of Linear Models}
+\begin{theorem} \label{l2-thm}
+Let $H = \qty{ x \mapsto w^T x : \norm{w}_2 \le B}$. Assume that $\E_{x \sim p} \norm{x}^2 \le C^2$. Then
+\begin{align}
+\label{linear-sample} R_S(H) &\le \frac{B}{n} \sqrt{\sum_i \norm{x_i}_2^2}
+\intertext{and}
+\label{linear} R_n(H) &\le \frac{BC}{\sqrt{n}}. 
+\end{align}
+\end{theorem}
+\begin{proof}
+We have
+\begin{align}
+R_S(H) &= \E_\sigma \sup_{\norm{w}_2 \le B} \frac1n \sum_i \sigma_i w^T x_i
+\\&= \E_\sigma \sup_{\norm{w}_2 \le B} w^T \qty(\frac1n \sum_i \sigma_i  x_i)
+\\&=  \frac{B}{n} \E_\sigma \norm{ \sum_i \sigma_i x_i}_2
+\intertext{since the $L_2$-norm is self-dual}
+&=  \frac{B}{n} \qty(\E_\sigma \norm{ \sum_i \sigma_i x_i}_2^2)^{1/2} \intertext{by Jensen's inequality: $\E z = \E \sqrt{z^2} \le \sqrt{\E z^2}$ for nonnegative $z$, since $\sqrt{\cdot}$ is concave}
+&\le \frac{B}{n} \qty(\E_\sigma \qty[\sum_i \cancelto{1}{\sigma_i^2} \norm{x_i}_2^2 + \cancelto{0}{\sum_{i \ne j} \sigma_i \sigma_j x_i^T x_j}\ \ \ ])^{1/2}
+\intertext{where the second sum vanishes because the $\sigma_i$s are independent with mean 0}
+&= \frac{B}{n} \sqrt{\sum_i \norm{x_i}_2^2}
+\end{align}
+This proves Eqn. \eqref{linear-sample}. Eqn. \eqref{linear} follows from taking an expectation:
+\begin{align}
+R_n(H) = \E R_S(H)
+&= \frac{B}{n} \E \sqrt{\sum_i \norm{x_i}_2^2}
+\le \frac{B}{n} \sqrt{ \sum_i \E \norm{x_i}_2^2}
+\le \frac{BC}{\sqrt{n}}
+\end{align}
+where the first inequality is another application of Jensen, and the second follows by definition of $C$.
+\end{proof}
+\begin{theorem} \label{l1-thm}
+Let $H = \qty{ x \mapsto w^T x : \norm{w}_1 \le B}$. Assume that $\norm{x_i}_\infty \le C$ for all $i$. Let $d$ be the dimension of the input; i.e. $x_i \in \R^d$ for all $i$. Then
+\begin{align}
+R_n(H) &\le \frac{2BC \sqrt{\log 2d}}{\sqrt{n}}. 
+\end{align}
+\end{theorem}\noindent
+We note first the similarities and differences between Theorems \ref{l2-thm} and \ref{l1-thm}. Theorem \ref{l2-thm} looks somewhat weaker: we have to make a stronger assumption, namely, $\norm{x_i}_\infty \le C$ for all $i$, instead of $\E \norm{x_i}_\infty \le C$, and the addition of a factor of $2 \sqrt{\log 2d}$. We also remark that it is possible---even likely---that Theorems like \ref{l2-thm} and \ref{l1-thm} apply for other pairs of norm-dual norm pairs. However, since the most common norms are $L_1, L_2, L_\infty$, we will restrict our attention to these for this class. We will now give a sketch of the proof of Theorem \ref{l1-thm}. The full proof is left as a homework problem.
+\begin{proof}[Proof Sketch]
+We will prove a slightly different statement, namely that with probability $1 - d^{-O(1)}$ over the random choice of $\sigma$, we have 
+\begin{align}\label{sketch-result}
+\sup_{\norm{w}_1 \le B}  \frac 1n \sum_i \sigma_i w^T x_i \lesssim \frac{2BC \sqrt{\log d}}{\sqrt{n}}.
+\end{align}
+This looks similar enough to our theorem that the theorem sounds believable as long as the tail of the distribution of the LHS is not too heavy. 
+\begin{align}
+\sup_{\norm{w}_1 \le B} \frac 1n \sum_i \sigma_i w^T x_i 
+&= \sup_{\norm{w}_1 \le B} w^T \qty( \frac 1n \sum_i \sigma_i  x_i)
+= \frac{B}{n} \norm{\sum_i \sigma_i  x_i}_\infty
+\end{align}
+Let $v = \sum_i \sigma_i x_i$. We claim that, with probability $1 - d^{-O(1)}$ over the random choice of $\sigma$, $\norm{v}_\infty \lesssim C \sqrt{n \log d}$, from which \eqref{sketch-result} follows immediately. To see this, fix an index $j$. Then
+$
+v_j = \sum_i \sigma_i x_{ij}
+$. 
+Since the $x_{ij}$ are all bounded by $C$ and the $\sigma_i$ are independent, Hoeffding's inequality implies that 
+\begin{align}
+\Pr[\abs{v_j} \ge \eps] \le 2 \exp( -O\qty(\frac{\eps^2}{nC^2}) ).
+\end{align}
+Taking $\eps = O(C \sqrt{n \log d})$, we conclude that $\Pr[\abs{v_j} \ge \eps] \le d^{-O(1)}$. Now a union bound over $j = 1, \dots, d$ gives that $\Pr[\norm{v_j} \lesssim C \sqrt{n \log d}] \le d^{-O(1)}$, as desired. Notice that the constant hidden by the $O(1)$ can be made small by increasing the constant hidden in the expression for $\eps$; we will thus not concern ourselves with figuring out the constant factors since it is unnecessary.
+\end{proof}
+\section{Rademacher Complexity of Neural Networks}
+Somewhat surprisingly, it has been empirically observed \cite{neyshabur2017exploring} that, in a neural network with a single hidden layer and no regularization, increasing the number of hidden units improves (or, at least, does not hurt) the generalization loss even past the point when the number of hidden units suffices to achieve zero training error. A recent paper \cite{2018arXiv181005369W} gives some theoretical bounds that justify these practical observations. In the next two lectures, we will see some of these bounds. 
+
+Throughout this section, we will use the following notation:
+\begin{itemize}
+\item $\Theta = (w, U)$ are the parameters of the model
+\item $f_\Theta(x) = w^T \phi(Ux)$ is the model function
+\item $m$ is the number of hidden units (i.e. the number of rows of $U$, and the number of elements of $w$)
+\item $\phi(x) = \max(x, 0)$ is the (element-wise) ReLU function
+\item $\{ x_i \}_{i=1}^n \subset \R^d$ is the training set
+\end{itemize}\noindent
+The main theorem we will seek to prove has the form 
+\begin{theorem}[Theorem 3.1 in \cite{2018arXiv181005369W}, informally] Suppose we train a two-layer neural network to minimize a logistic loss function. Then the generalization error decreases as the training error increases.
+\end{theorem}\noindent
+The proof and precise statement of this result will be deferred to the next lecture. We will first warm up by showing a simpler statement.
+\begin{theorem}[Special case of Theorem 43, in Section 6.4 of Percy Liang's notes]
+\label{liang-thm} 
+Let 
+\begin{align}
+H = \qty{ f_\Theta : \norm{w}_2 \le B' \text{ and } \norm{u_i} \le B \text{ for all $i$}}
+\end{align} where $u_i$ is the $i$th column of $U$. Then 
+\begin{align}
+R_n(H) \le 2BB'C \sqrt{\frac{m}{n}}.
+\end{align}
+\end{theorem}
+\begin{proof}
+Let $g_U(x) \triangleq \phi(Ux)$ for matrices $U$. Then $f_\Theta(x) = w^T g_U(x)$. Thus:
+\begin{align}
+R_S(H) &= \E_\sigma \sup_\Theta \frac1n \sum_i \sigma_i w^T g_U(x_i)
+\\&= \E_\sigma \sup_\Theta w^T \qty(\frac1n \sum_i \sigma_i  g_U(x_i))
+\\&= \E_\sigma \sup_\Theta \norm{w}_2 \norm{\frac1n \sum_i \sigma_i  g_U(x_i)}_2
+\intertext{since we can always pick $w$ to point in the same direction as $\frac1n \sum_i \sigma_i  g_U(x_i)$}
+&= B' \E_\sigma \sup_{U:\norm{u_j}_2 \le B\,\forall j}  \norm{\frac1n \sum_i \sigma_i  g_U(x_i)}_2
+\\&\le B' \sqrt{m} \E_\sigma \max_j \sup_{\norm{u_j}_2 \le B}  \abs{\frac1n \sum_i \sigma_i  \phi(u_j^T x_i)}
+% \\&\le B' \sqrt{m} \E_\sigma \sup_{\norm{u_j}_2 \le B}  \abs{\frac1n \sum_i \sigma_i  g_U(x_i)}
+\intertext{by symmetry}
+&= B' \sqrt{m} \E_\sigma \sup_{\norm{u}_2 \le B}  \abs{\frac1n \sum_i \sigma_i  \phi(u^Tx_i)}.
+\end{align}
+The expectation looks very suspiciously like $R_S\qty(\qty{ x \mapsto \phi(u^T x) : \norm{u}_2 \le B})$; we only differ from the definition of Rademacher complexity by an absolute value sign. In fact, some sources, including the original paper on Rademacher complexity \cite{bartlett2002rademacher} define it with the absolute value sign. An analogue of Talagrand's Lemma for this definition is stated in Theorem 12 (Section 3.1) of \cite{bartlett2002rademacher}, in which we lose an extra factor of 2. Using this, since $\phi$ is 1-Lipschitz, we can continue
+\begin{align}
+R_S(H) &\le 2 B' \sqrt{m} \E_\sigma \sup_{\norm{u}_2 \le B}  \abs{\frac1n \sum_i \sigma_i  u^Tx_i}
+\\&= 2 B' \sqrt{m} \E_\sigma \sup_{\norm{u}_2 \le B} \frac1n \sum_i \sigma_i  u^Tx_i
+\\&= 2 B' \sqrt{m} R_S\qty(\qty{x \mapsto u^T x : \norm{u}_2 \le B})
+\\R_n(H) &\le 2B'\sqrt{m} R_n\qty(\qty{x \mapsto u^T x : \norm{u}_2 \le B}) \le 2BB'C \sqrt{\frac{m}{n}}
+\end{align}
+where the last line follows from Theorem \ref{l2-thm}.
+\end{proof}\noindent
+Theorem \ref{liang-thm} is weaker than the theorem we would like to prove, since there is a $\sqrt{m}$ in the numerator which we'd like to get rid of. We will refine this bound in the next lecture.
+
+\bibliographystyle{unsrt}
+\bibliography{10_15_final}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

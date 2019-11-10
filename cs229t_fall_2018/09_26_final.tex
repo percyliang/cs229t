@@ -1,0 +1,402 @@
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%\input{tcilatex}
+
+
+\documentclass[11pt,letterpaper]{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\ones}{\mathbf 1}
+\newcommand{\real}{\mathbf{R}}
+\newcommand{\integers}{{\mbox{\bf Z}}}
+\newcommand{\sym}{{\mbox{\bf S}}}  % symmetric matrices
+
+\newcommand{\nullspace}{{\mathcal N}}
+\newcommand{\range}{{\mathcal R}}
+\newcommand{\Rank}{\mathop{\bf Rank}}
+\newcommand{\trace}{\mathop{\bf Tr}}
+\newcommand{\diag}{\mathop{\bf diag}}
+\newcommand{\card}{\mathop{\bf card}}
+\newcommand{\rank}{\mathop{\bf rank}}
+\newcommand{\conv}{\mathop{\bf conv}}
+\newcommand{\prox}{\mathbf{prox}}
+
+\newcommand{\diff}{\mathrm{d}}
+\newcommand{\expt}{\mathbf{E}}
+\newcommand{\Diff}{\mathbf{D}}
+\newcommand{\prob}{\mathop{\bf Prob}}
+\newcommand{\Co}{{\mathop {\bf Co}}} % convex hull
+\newcommand{\dist}{\mathop{\bf dist{}}}
+\newcommand{\argmin}{\mathop{\rm argmin}}
+\newcommand{\argmax}{\mathop{\rm argmax}}
+\newcommand{\epi}{\mathop{\bf epi}} % epigraph
+\newcommand{\Vol}{\mathop{\bf vol}}
+\newcommand{\dom}{\mathop{\bf dom}} % domain
+\newcommand{\intr}{\mathop{\bf int}}
+\newcommand{\sign}{\mathop{\bf sign}}
+\newcommand{\gotod}{\overset{d}{\longrightarrow}}
+\newcommand{\eps}{\varepsilon}
+
+\newcommand{\cf}{{\it cf.}}
+\newcommand{\eg}{{\it e.g.}}
+\newcommand{\ie}{{\it i.e.}}
+\newcommand{\etc}{{\it etc.}}
+
+\usepackage{amsmath,amsthm,amssymb,amsfonts,graphicx,bm}
+\usepackage{fullpage,graphicx,psfrag,amsmath,amsfonts,verbatim}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{parskip}
+\usepackage[small,bf]{caption}
+\usepackage[margin=1in]{geometry}
+\usepackage[numbers]{natbib}
+\usepackage{url}
+
+%\setcounter{MaxMatrixCols}{10}
+%TCIDATA{OutputFilter=Latex.dll}
+%TCIDATA{Version=5.50.0.2960}
+%TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
+%TCIDATA{BibliographyScheme=Manual}
+%TCIDATA{LastRevised=Wednesday, September 26, 2018 18:10:58}
+%TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
+%
+%\setlength{\topmargin}{0pt}
+%\setlength{\textheight}{9in}
+%\setlength{\headheight}{0pt}
+%\setlength{\headsep}{0pt}
+%\setlength{\oddsidemargin}{0.25in}
+%\setlength{\textwidth}{6in}
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+\pagestyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{case}{Case}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{assumption}{Assumption}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+\newtheorem{remark}{Remark}
+
+\begin{document}
+
+
+\thispagestyle{empty}
+
+%\vbox to 0.25in{\noindent
+%\raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+%DRAFT --- a final version will be posted shortly}}} \vspace{-.25in}%
+%\vspace{-\baselineskip}
+
+\begin{center}
+\textbf{\large CS229T/STATS231: Statistical Learning Theory }
+\end{center}
+
+\noindent Lecturer: Tengyu Ma %%% FILL IN LECTURER (if not RS)
+\hfill Lecture 2 %%% FILL IN LECTURE NUMBER HERE
+\newline
+Scribe: Nian Si, Honglin Yuan %%% FILL IN YOUR NAME HERE
+\hfill Sept. 26th, 2018 %%% FILL IN LECTURE DATE HERE
+
+\noindent \rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Review and Overview}
+This lecture is about the proof of asymptotics of Maximum likelihood estimator (MLE).
+
+Let $(x^{(1)}, y^{(1)}), (x^{(2)}, y^{(2)}), \ldots, (x^{(n)}, y^{(n)})$ be some training data, and $\{p_{\theta}(y|x): \theta \in \real^p\}$ be the parametrized family of distributions. In this lecture we consider the following ``well-specified'' case, in which $\theta^*$ is the ground-truth parameter, i.e., for any fixed $x$, $y|x$ is distributed as $p_{\theta^*} (y|x)$. 
+
+For MLE, the loss function is defined as
+\[
+	l((x,y),\theta) := -\log p_{\theta}(y | x).
+\]
+The expected loss of a parameter $\theta$ is defined as
+\[
+	L(\theta) := \mathbf{E}_x \expt_{y|x \sim p_{\theta^*}} [l((x,y), \theta)],
+\]
+and the training loss of $\theta$ is the empirical average
+\[
+	\hat{L}(\theta )=\frac{1}{n}\sum_{i=1}^{n}l((x^{(i)},y^{(i)}),\theta ).
+\]
+The MLE takes the estimator $\hat{\theta}$ that minimizes the training loss $\hat{L}(\theta)$, i.e.,
+\begin{equation}
+	\hat{\theta} \in \argmin_{\theta \in \real^p} \hat{L}(\theta).
+	\label{eq:def:thetahat}
+\end{equation}
+The main goal of this lecture is to show the following theorem regarding the asymptotic behavior of MLE. The results are helpful for us to get an intuition of the order of suboptimality.
+\begin{theorem}
+\label{thm1}
+	Assuming that $\hat{\theta}\gotod \theta^\ast$ and certain regularity conditions hold \footnote{See \url{https://en.wikipedia.org/wiki/Maximum_likelihood_estimation} for details}, we have
+	\begin{eqnarray}
+			\sqrt{n}(\hat{\theta}-\theta ^{\ast }) \overset{d}{
+\longrightarrow }N(0,Q^{-1}) \label{eq:thm1eq1} \\
+n(L(\hat{\theta})-L(\theta ^{\ast })) \overset{d}{\longrightarrow }\frac{1%
+}{2}\chi ^{2}(p) \label{eq:thm1eq2}
+	\end{eqnarray}
+where $Q$ is the Fisher information matrix%
+\begin{equation*}
+Q= \expt_x\expt_{y|x \sim p_{\theta^*}}[\nabla _{\theta }\log p_{\theta ^{\ast }}(y|x)\nabla _{\theta }\log
+p_{\theta ^{\ast }}(y|x)^{T}],
+\end{equation*}%
+and $\chi ^{2}(p)$ is the chi-square distribution, i.e, $\chi
+^{2}(p)=\sum_{i=1}^{p}X_{i}^{2},$ $X_i\sim N(0,1)$, $X_i$ i.i.d..
+%	\begin{eqnarray*}
+%\sqrt{n}\left( \hat{\theta}-\theta ^{\ast }\right) &&\overset{d}{%
+%\longrightarrow }N(0,Q^{-1}) \\
+%n(L(\hat{\theta})-L(\theta ^{\ast })) &&\overset{d}{\longrightarrow }\frac{1%
+%}{2}\chi ^{2}(p),
+%\end{eqnarray*}%
+\end{theorem}
+
+\section{Proof of Asymototics of MLE}
+%\begin{theorem}
+%\label{thm1} Under certain regular conditions \footnote{%
+%\url{https://en.wikipedia.org/wiki/Maximum_likelihood_estimation}}, let $y|x \sim p_{\theta ^{\ast }}$ and $l((x,y),\theta )=-\log p_{\theta
+%}(y|x)$. 
+%Define expected loss as
+%\begin{equation*}
+%L(\theta )=E[l((x,y),\theta )],
+%\end{equation*}
+%and training loss as
+%\begin{equation*}
+%\hat{L}(\theta )=\frac{1}{n}\sum_{i=1}^{n}l((x^{(i)},y^{(i)}),\theta ).
+%\end{equation*}%
+%Let $\hat{\theta}\in \arg \min_{\theta \in R^{p}}\hat{L}(\theta ).$ Then, we
+%have
+%\begin{eqnarray*}
+%\sqrt{n}\left( \hat{\theta}-\theta ^{\ast }\right) &&\overset{d}{%
+%\longrightarrow }N(0,Q^{-1}) \\
+%n(L(\hat{\theta})-L(\theta ^{\ast })) &&\overset{d}{\longrightarrow }\frac{1%
+%}{2}\chi ^{2}(p),
+%\end{eqnarray*}%
+%
+%\end{theorem}
+
+Before giving a proof of the theorem, we first show several lemmas. 
+
+The first lemma deals with the linear transformation of multivariate Gaussian vector and its relationship to chi-square distribution.
+\begin{lemma}
+\label{lemma1}
+\begin{enumerate}
+	\item[(a)]	If $Z\sim N(0,\Sigma ^{-1})$, we have $AZ\sim N(0,A\Sigma
+^{-1}A^{T}).$.
+	\item[(b)] If $Z\sim N(0,\Sigma ^{-1})$ and $Z\in \real^{p}$, we have $Z^{T}\Sigma
+Z\sim \chi ^{2}(p).$
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+	The proof of (a) follows directly from the characteristic function of multivariate Gaussian. For (b),  we note that
+\begin{equation*}
+\Sigma ^{1/2}Z\sim N(0,\Sigma ^{1/2}\Sigma ^{-1}\Sigma ^{1/2})=N(0,I).
+\end{equation*}%
+Then,
+\begin{equation*}
+Z^{T}\Sigma Z=\left\Vert Z^{T}\Sigma Z\right\Vert _{2}^{2}\sim \chi ^{2}(p).
+\end{equation*}
+\end{proof}
+
+
+\begin{lemma}
+\label{lemma2} 
+\begin{enumerate}
+	\item [(a)] $Q=\nabla ^{2}L(\theta ^{\ast }).$
+	\item [(b)] $\nabla ^{2}L(\theta ^{\ast })\succeq 0$, i.e., $\nabla
+^{2}L(\theta ^{\ast })$ is positive semidefinite.
+	\item [(c)] $\nabla L(\theta ^{\ast })=0$.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+	First, we prove (c). Let $z=y|x.$ Since $p_{\theta }(z)$ is a density,
+we have $\int p_{\theta }(z)dz=1.$ By taking derivatives of both sides, we
+have%
+\begin{equation*}
+\int \nabla p_{\theta }(z)dz=\nabla \left(\int p_{\theta }(z)dz \right)=0.
+\end{equation*}%
+Similarly, we have%
+\begin{equation}
+\int \nabla ^{2}p_{\theta }(z)dz=0.  \label{delta2}
+\end{equation}%
+Then, since $\nabla p_{\theta }(z)=[\nabla \log (p_{\theta }(z))]p_{\theta
+}(z),$ we have%
+\begin{equation*}
+\expt_{z\sim p_{\theta }}[\nabla \log (p_{\theta }(z))]=\int \nabla \log
+(p_{\theta }(z))p_{\theta }(z) dz=0.
+\end{equation*}%
+By plugging $\theta ^{\ast }$ in, we have
+\begin{equation*}
+\nabla L(\theta ^{\ast })=-\expt_x\expt_{z\sim p_{\theta^*}}[\nabla \log p_{\theta ^{\ast }}(y|x)]=0.
+\end{equation*}
+This gives (c).
+
+Then, we turn to prove (a). Note that
+\begin{equation*}
+\nabla ^{2}L(\theta )=\expt_{x}\expt_{y|x}\left[ \nabla ^{2}l((x,y),\theta )\right]
+=\expt_{x}\expt_{y|x}\left[ -\nabla ^{2}\log p_{\theta }(y|x)\right] =\expt_{x}\expt_{z}%
+\left[ -\nabla ^{2}\log p_{\theta }(z)\right].
+\end{equation*}%
+Recall that we define $z = y|x$. For the inner expectation, we have
+\begin{equation*}
+\expt_{z}\left[ -\nabla ^{2}\log p_{\theta }(z)\right] =
+\expt_{z}\left[ -\nabla \left(
+\frac{\nabla p_{\theta }(z)}{p_{\theta }(z)} \right)\right] =
+\expt_{z}\left[ \frac{%
+\nabla p_{\theta }(z)\nabla p_{\theta }(z)^{T}}{p_{\theta }(z)^{2}}-\frac{%
+\nabla ^{2}p_{\theta }(z)}{p_{\theta }(z)}\right] .
+\end{equation*}%
+From (\ref{delta2}), we have%
+\begin{equation*}
+\expt_{z}\left[ \frac{\nabla ^{2}p_{\theta }(z)}{p_{\theta }(z)}\right] =\int
+\frac{\nabla ^{2}p_{\theta }(z)}{p_{\theta }(z)}p_{\theta }(z)dz=0.
+\end{equation*}%
+Also,
+\begin{equation*}
+\expt_{z}\left[ \frac{\nabla p_{\theta }(z)\nabla p_{\theta }(z)^{T}}{p_{\theta
+}(z)^{2}}\right] = \expt_{z}[\nabla _{\theta }\log p_{\theta ^{\ast
+}}(z)\nabla _{\theta }\log p_{\theta ^{\ast }}(z)^{T}].
+\end{equation*}
+Hence $\nabla^2 L(\theta^*) = Q$. (b) follows directly from the fact that $Q \succeq 0 $.
+\end{proof}
+
+\begin{corollary}
+If $\ \nabla ^{2}L(\theta ^{\ast })$ is of full rank, then $\nabla ^{2}L(\theta
+^{\ast })$ is positive definite, $\theta ^{\ast }$ is a local minimizer of $%
+L(\theta ).$
+\end{corollary}
+
+%Then, we will first show the consistence of $\hat{\theta}$. We will give a heuristic proof of this fact.
+%\begin{lemma}
+%$\hat{\theta}-\theta ^{\ast }\overset{d}{\longrightarrow }0.$\footnote{%
+%If the limiting distribution is constant, converge in probability is
+%equivalent to converge in distribution.}
+%\end{lemma}
+%\begin{proof}(Heuristic) 
+%By law of large number,
+%\begin{eqnarray*}
+%\nabla ^{2}\hat{L}(\theta ^{\ast }) &\overset{d}{\longrightarrow }&\nabla
+%^{2}L(\theta ^{\ast }) \\
+%\nabla \hat{L}(\theta ^{\ast }) &\overset{d}{\longrightarrow }&\nabla
+%L(\theta ^{\ast }).
+%\end{eqnarray*}%
+%According to (\ref{lemma2}), we have $\nabla L(\theta ^{\ast })=0.$ Then,
+%\begin{equation*}
+%\hat{\theta}-\theta ^{\ast }\overset{d}{\longrightarrow }0.
+%\end{equation*}
+%\end{proof}
+
+We now give the proof of theorem \ref{thm1}.
+
+\begin{proof} Recall that we defined that
+\begin{equation*}
+\nabla \hat{L}(\theta)=\frac{1}{n}\sum_{i=1}^{n}\nabla
+l((x^{(i)},y^{(i)}),\theta).
+\end{equation*}%
+
+By doing Taylor expansion of $\nabla \hat{L}(\theta )$ at $\theta ^{\ast }$, we have%
+\begin{equation*}
+\nabla \hat{L}(\theta )=\nabla \hat{L}(\theta ^{\ast })+\nabla ^{2}\hat{L}%
+(\theta ^{\ast })(\theta -\theta ^{\ast })+O(\left\Vert \theta -\theta
+^{\ast }\right\Vert _{2}^{2}).
+\end{equation*}%
+Particularly, for $\theta = \hat{\theta}$, we have%
+\begin{equation*}
+\nabla \hat{L}(\hat{\theta})=\nabla \hat{L}(\theta ^{\ast })+\nabla ^{2}\hat{%
+L}(\theta ^{\ast })(\hat{\theta}-\theta ^{\ast })+O(\left\Vert \hat{\theta}
+-\theta ^{\ast }\right\Vert _{2}^{2}).
+\end{equation*}%
+And by definition of minimizer (\ref{eq:def:thetahat}) , $\nabla \hat{L}(\hat{\theta})=0.$ Then,
+\begin{equation}
+\hat{\theta}-\theta ^{\ast }=-\left( \nabla ^{2}\hat{L}(\theta ^{\ast
+})\right) ^{-1}\nabla \hat{L}(\theta ^{\ast })+O(\left\Vert \hat{\theta} -\theta
+^{\ast }\right\Vert _{2}^{2}).  \label{taylorexp}
+\end{equation}%
+Now, by CLT, we have
+\begin{equation*}
+\sqrt{n}\nabla \hat{L}(\theta ^{\ast })=\sqrt{n}\left( \nabla \hat{L}(\theta
+^{\ast })-\nabla L(\theta ^{\ast })\right) \overset{d}{\longrightarrow
+}N(0,\mathrm{Cov}\left( \nabla l((x,y),\theta^* )\right) ).
+\end{equation*}%
+Substituting into (\ref{taylorexp}), we obtain
+\begin{equation*}
+\sqrt{n}\left( \hat{\theta}-\theta ^{\ast }\right) =-\left( \nabla ^{2}\hat{L%
+}(\theta ^{\ast })\right) ^{-1}\sqrt{n}\nabla \hat{L}(\theta ^{\ast })+\text{%
+higher order term.}
+\end{equation*}%
+By Slutsky's theorem, we have
+\begin{equation*}
+\sqrt{n}\left( \hat{\theta}-\theta ^{\ast }\right) \overset{d}{%
+\longrightarrow }\nabla ^{2}L(\theta ^{\ast })^{-1}N(0,\mathrm{Cov}\left( \nabla
+l((x,y),\theta )\right) ).
+\end{equation*}%
+Since $Q=\nabla ^{2}L(\theta ^{\ast })=\mathrm{Cov}\left( \nabla l((x,y),\theta
+)\right) $ and (a) of lemma \ref{lemma1}, we have%
+\begin{equation*}
+\sqrt{n}\left( \hat{\theta}-\theta ^{\ast }\right) \overset{d}{%
+\longrightarrow }N(0,Q^{-1}).
+\end{equation*}%
+For the second part of theorem, by Taylor expansion at $\theta ^{\ast },$ we
+have%
+\begin{equation*}
+L(\hat{\theta})-L(\theta ^{\ast })=\nabla L(\theta ^{\ast })^{T}(\hat{\theta}%
+-\theta ^{\ast })+\frac{1}{2}(\hat{\theta}-\theta ^{\ast })^{T}\nabla
+^{2}L(\theta ^{\ast })(\hat{\theta}-\theta ^{\ast })+o(\left\Vert \hat{\theta%
+}-\theta ^{\ast }\right\Vert _{2}^{2}).
+\end{equation*}%
+Since $\nabla L(\theta ^{\ast })=0,$ we have
+\begin{equation*}
+L(\hat{\theta})-L(\theta ^{\ast })=\frac{1}{2}(\hat{\theta}-\theta ^{\ast
+})^{T}\nabla ^{2}L(\theta ^{\ast })(\hat{\theta}-\theta ^{\ast
+})+o(\left\Vert \hat{\theta}-\theta ^{\ast }\right\Vert _{2}^{2}),
+\end{equation*}%
+by the first part of theorem, $Q=\nabla ^{2}L(\theta ^{\ast })$ and (b) of
+lemma \ref{lemma1}, we have%
+\begin{equation*}
+n(L(\hat{\theta})-L(\theta ^{\ast }))\overset{d}{\longrightarrow }\frac{1}{2}%
+\chi ^{2}(p),
+\end{equation*}
+completing the proof.
+\end{proof}
+
+
+\section{Consistency}
+Our main result (Theorem~\ref{thm1}) assumes consistency of the MLE $\hat{\theta}$, which can be shown under certain additional assumptions on the problem. Here we state one such consistency result, which we hope reveals the type of assumptions one need to have consistency.
+
+\begin{theorem}[Theorem 5.7,~\cite{vdv}]
+\label{thm:consistency}
+Suppose MLE is performed in $\Theta\subset \real^p$, i.e. $\theta=\argmin_{\theta\in\Theta} \hat{L}(\theta)$. Assume that
+\begin{enumerate}
+\item (Uniform convergence) We have
+\begin{equation*}
+\sup_{\theta\in\Theta} |\hat{L}(\theta) - L(\theta)| \gotod 0;
+\end{equation*}
+\item (Identifiability) For every $\eps>0$,
+\begin{equation*}
+\inf_{\theta\in\Theta,~\|\theta-\theta^\ast\|\ge \eps} L(\theta) > L(\theta^\star).
+\end{equation*}
+\end{enumerate}
+Then the MLE has consistency: $\hat{\theta}\gotod \theta^\star$.
+\end{theorem}
+
+\begin{remark}
+The positive definiteness of the Hessian $\nabla^2 L(\theta^\ast)$ guarantees that identifiability holds \emph{locally} (in a neighborhood of $\theta^\ast$), but does not imply identifiability because of a lack of \emph{global} information. 
+
+To give a counter-example, suppose $\theta^\ast$ is the global minimizer of $L$ and the Hessian is positive definite, but there exists a sequence of $\theta_n$ such that $\|\theta_n-\theta^\ast\|=n$ but $L(\theta_n)=L(\theta^\ast)+1/n$, then the identifiability is violated: the inf is not strictly greater than but equal to $L(\theta^\ast)$. The reason is that the Hessian does not reveal information about $L$ outside an infinitesimal neighborhood of $\theta^\ast$.
+
+One way to exclude such adversarial case is to assume convexity: when $L$ is convex, a local strong growth implies global growth and thus identifiability.
+\end{remark}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \bibliographystyle{abbrvnat}
+\bibliographystyle{abbrvnat}
+\bibliography{bib}
+
+\end{document}

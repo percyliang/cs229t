@@ -1,0 +1,285 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+\usepackage[makeroom]{cancel}
+
+
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+
+\pagestyle{plain}
+
+\usepackage{ amsthm, amsmath, amssymb}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{lemma}[theorem]{Lemma}
+
+
+\begin{document}
+
+\thispagestyle{empty}
+
+% \draftnotice
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture 15               %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Maxwell Allman, Faidra Monachou                 %%% FILL IN YOUR NAME HERE
+\hfill
+November 12, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Review and Overview}
+
+In the previous lecture, we introduced the following ``Follow the Leader" algorithm:
+	
+~\\\noindent\textbf{``Follow The Leader" (FTL) algorithm }
+
+\noindent On each iteration $t = 1, \ldots, T$, we select 
+\begin{equation}
+\label{eq:w_t_definition}
+w_t = \arg \min_{w \in \Omega} \sum_{i=1}^{t-1} f_i (w),    
+\end{equation}
+ where $\sum_{i=1}^{t-1} f_i (w)$ is the sum of previous losses (up to the previous iteration $t-1$).
+
+~\\As we showed with an example for $N=2$, FTL can perform very poorly, getting the worst possible regret. 
+In today's lecture, our goal is to fix FTL. 
+
+
+
+\section{``Be The Leader" Algorithm }
+
+To build some intuition about the next algorithm, we start with a ``cheating" solution.
+
+~\\\noindent\textbf{``Be The Leader" (BTL) algorithm }
+
+\noindent In the ``Be The Leader" algorithm, we still find 
+$w_t = \arg \min_{w \in \Omega} \sum_{i=1}^{t-1} f_i (w)$ for each time $t$ but we now play $w_{t+1}$ at iteration $t$.
+
+~\newline
+The following Lemma shows that, if we were able to cheat and play $w_{t+1}$ at time $t$, we would end up with zero regret.
+
+\begin{lemma}[BTL]
+For the regret of the BTL algorithm, it holds that
+\label{lemma:BTL}
+\begin{equation}
+    \label{eq:BTL_regret}
+    \sum_{t=1}^T f_t (w_{t+1}) - \min_{w \in \Omega} \sum_{t=1}^T f_t (w) \leq 0.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+First, note that $w_{T+1} = \arg \min \sum_{t=1}^T f_t (w)$. 
+Hence, we can expand the sums in \eqref{eq:BTL_regret} and write them as follows
+
+\begin{equation*}
+\begin{split}
+     \sum_{t=1}^T f_t (w_{t+1}) - \min_{w \in \Omega} \sum_{t=1}^T f_t (w) &= 
+    f_1(w_2) + \ldots + \cancel{f_T (w_{T+1})} - (f_1(w_{T+1}) + \ldots + \cancel{f_{T}(w_{T+1})}) =\\&=  f_1(w_2) + \ldots + f_{T-1} (w_{T}) - (f_1(w_{T+1}) + \ldots + f_{T-1}(w_{T+1}))
+\end{split}
+\end{equation*}
+
+By definition, we have that $w_{T+1} = \arg \min \sum_{t=1}^T f_t (w)$, thus we get the following inequality by replacing $w_{T+1}$ by $w_T$:
+
+\begin{equation*}
+\begin{split}
+     \sum_{t=1}^T f_t (w_{t+1}) - \min_{w \in \Omega} \sum_{t=1}^T f_t (w) &\leq 
+      f_1(w_2) + \ldots + \cancel{f_{T-1} (w_{T})} - (f_1(w_{T}) + \ldots + \cancel{f_{T-1}(w_{T})})
+      \\&\leq f_1(w_2) + \ldots + f_{T-2} (w_{T-1}) - (f_1(w_{T}) + \ldots + f_{T-2}(w_{T}))
+\end{split}
+\end{equation*}
+
+\noindent By recursively repeating the same argument, we eventually get that
+\begin{equation*}
+\begin{split}
+     \sum_{t=1}^T f_t (w_{t+1}) - \min_{w \in \Omega} \sum_{t=1}^T f_t (w) &\leq 
+      f_1(w_2) - f_1(w_3) \leq 0.
+\end{split}
+\end{equation*}
+\end{proof}
+
+\noindent By the BTL Lemma, we can write the regret as 
+\begin{equation*}
+    R = \sum_{t=1}^Tf_t(w_t) - \min_{w \in \Omega} \sum_{t=1}^T f_t (w) \leq \sum_{t=1}^T (f_t (w_t) - f_t(w_{t+1})),
+\end{equation*}
+where each term $f_t (w_t) - f_t(w_{t+1})$ captures the stability of the algorithm. 
+Thus, if we have stability, we can achieve better regret;
+for that reason, in the two expert problem that we saw in the previous lecture, we had larger regret.
+
+\section{``Follow The Regularized Leader" Algorithm}
+
+In this section, we introduce and study the properties of the ``Follow the Regularized Leader" (FTRL) algorithm.
+
+~\\\noindent\textbf{``Follow The Regularized Leader" (FTRL) algorithm }
+
+\noindent On each iteration $t = 1, \ldots, T$, we select 
+\begin{equation}
+\label{eq:w_t_definition_FTRL}
+w_t = \arg \min_{w \in \Omega} \sum_{i=1}^{t-1} f_i (w) + \frac{1}{\eta}\phi(w),    
+\end{equation}
+ where $\phi(\cdot)$ is the regularizer such that $\phi(w)$ is 1-strongly convex. 
+ We will define $\eta$ later.
+
+An important property that we will need in the analysis of the FTRL algorithm is that $\phi(w)$ is 1-strongly convex. 
+Before we introduce the definition of $a$-strong convexity, note that convexity implies that
+\begin{equation*}
+    \forall x, y, \text{    }  f(x) - f(y) \geq \langle \nabla f(y), x-y \rangle.
+\end{equation*}
+
+\noindent We expand this property to define the notion of $a$-stong convexity.
+
+\begin{definition}
+We say that  the function $f: \Omega \rightarrow \mathbb{R}$ is \textit{$\alpha$-strongly convex} if
+\begin{equation}
+    \label{eq:strong_convexity_def}
+    \forall x, y, \text{    }  f(x)- f(y) \geq
+    \langle \nabla f(y), x-y \rangle + \frac{\alpha}{2} \| x-y\|_2^2.
+\end{equation}
+\end{definition}
+
+
+\noindent\textbf{Remark.} Using the second-order Taylor expansion, one can interpret this definition  as follows:
+\begin{equation*}
+     f(x)- f(y) \simeq
+    \langle \nabla f(y), x-y \rangle + 
+    \langle x-y, \nabla^2 f(y)(x-y) \rangle + \ldots
+\end{equation*}
+%Furthermore, if $f$ is 3rd order differentiable, 
+%\begin{equation*}
+% $a$\text{-strongly convex} \Leftrightarrow \sigma_\text{min} (\nabla^2 f(y)) \geq a   
+%\end{equation*}
+
+~\\\noindent The following notation will be helpful for the application of the upcoming lemma. Let
+$$F(w) \triangleq \sum_{i=1}^{t-1}f_i(w)+\frac{1}{\eta}\phi(w)$$
+and 
+$$G(w) \triangleq \sum_{i=1}^{t}f_i(w)+\frac{1}{\eta}\phi(w) = F(w) + f_t(w).$$
+Then it follows that  
+$$w_t = \arg \min_{\omega \in \Omega} F(w)$$
+and 
+$$w_{t+1} = \arg \min_{\omega \in \Omega} G(w).$$
+
+\begin{lemma}\label{bound}
+Suppose F is $\alpha$-strongly convex, $f$ is convex, and let 
+$$w = \arg \min_z F(z)$$
+and 
+$$w' = \arg \min_z G(z).$$
+Then, $$0 \leq f(w) - f(w') \leq \frac{1}{\alpha}||\nabla f(w)||_2^2.$$ 
+\end{lemma}
+\proof Since $F$ is $\alpha$-strongly convex, 
+$$F(w')-F(w) \geq \langle \nabla F(w), w'-w \rangle + \frac{\alpha}{2}||w-w'||_2^2.$$
+By the optimality of $w$, it follows from convex analysis that $\langle \nabla F(w),w'-w \rangle \geq 0$, so 
+
+\begin{equation}
+    \label{eq:one}
+F(w')-F(w) \geq \frac{\alpha}{2}||w-w'||_2^2.
+\end{equation}
+Similarly, we get 
+\begin{equation}
+\label{eq:two}
+G(w')-G(w) \geq \frac{\alpha}{2}||w-w'||_2^2.
+\end{equation}
+Combining \eqref{eq:one} and \eqref{eq:two} gives 
+\begin{equation}
+    f(w) - f(w') \geq \alpha ||w-w'||_2^2 \geq 0
+\end{equation}
+and 
+\begin{equation}\label{eq:three}
+\begin{split}
+    f(w) - f(w') & \leq |\langle \nabla f(w),w-w'\rangle |\\
+    & \leq ||\nabla f(w)||_2 ||w-w'||_2\\
+    & \leq ||\nabla f(w)||_2 \cdot \sqrt{\frac{1}{\alpha}(f(w)-f(w')}
+\end{split}
+\end{equation}
+$$\implies f(w)-f(w') \leq \frac{1}{\alpha}||\nabla f(w)||_2^2$$
+where the second inequality in \eqref{eq:three} follows by Cauchy-Schwartz inequality. \qed \\\\
+This lemma can be generalized to arbitrary norms, but we first need a definition. 
+\begin{definition}
+F is $\alpha$-strongly convex w.r.t. norm $||\cdot ||$ on $\Omega$ if $\hspace{1mm} \forall x,y \in \Omega$, 
+$$f(x) - f(y) \geq \langle \nabla f(x), x-y \rangle + \frac{\alpha}{2}||x-y||^2.$$
+\end{definition}
+\begin{lemma}
+\label{lemma:general_norm}
+Suppose $F$ is $\alpha$-strongly convex, $f$ is convex, and let 
+$$w = \arg \min_z F(z)$$
+and 
+$$w' = \arg \min_z G(z).$$
+Then, $$0 \leq f(w) - f(w') \leq \frac{1}{\alpha}||\nabla f(w)||_*^2,$$
+where $||\cdot ||_*$ is the dual norm of $||\cdot ||$.
+\end{lemma}
+\proof The proof follows analogously to the proof of lemma \ref{bound}.\qed \\\\
+We can now bound the regret of the FTRL algorithm.
+\begin{theorem}[Regret bound of FTRL]
+Suppose $\phi$ is 1-strongly convex w.r.t. $||\cdot ||$. Then, the
+regret $R$ of the FTRL algorithm~\eqref{eq:w_t_definition} is bounded by 
+\begin{equation*}
+    R \leq \frac{D}{\eta} + \eta \sum_{t=1}^T ||\nabla f_t(w_t)||^2_*,
+\end{equation*}
+where $D = \max_{x \in \Omega} \phi(x) - \min_{x\in \Omega} \phi (x)$.
+\end{theorem}
+
+~\\\noindent In addition, if $||\nabla f_t (w)||_* \leq G$ for all $w$ and $f_t$, then taking
+$$\eta = \sqrt{\frac{D}{TG^2}}$$
+gives 
+$$R \leq O(G\sqrt{TD}).$$
+\proof Let 
+$$f_0(w) = \frac{\phi(w)}{\eta}, \hspace{3mm} w_t = \arg \min_{w\in \Omega} \sum_{i=0}^{t-1}f_i(w)$$
+Then, using the BTL lemma, 
+\begin{equation*}
+    \sum_{t=0}^T f_t(w_t) - \arg \min_{w\in \Omega} \sum_{t=0}^T f_i(w) \leq \sum_{t=0}^T (f_t(w_t) - f_t(w_{t+1}).
+\end{equation*}
+Thus, letting $w^* = \arg \min_{w\in \Omega} \sum_{t=1}^T f_t(w)$, 
+\begin{equation*}
+    \begin{split}
+        \sum_{t=0}^T f_t(w_t) - \arg \min_w \sum_{t=0}^T f_t(w) & \geq f_0(w_0) + \sum_{t=1}^T f_t(w_t) - \sum_{t=0}^T f_t(w^*)\\
+        & = \sum_{t=1}^T f_t(w_t) - \sum_{t=1}^T f_t(w^*) + f_0(w_0) - f_0(w^*).
+    \end{split}
+\end{equation*}
+so 
+$$\sum_{t=0}^T (f_t(w_t) - f_t(w_{t+1})) =  f_0(w_0) - f_0(w_1) + \sum_{t=1}^T (f_t(w_t) - f_t(w_{t+1})).$$
+By Lemma \ref{lemma:general_norm} with $F = \sum_{i=0}^{t-1} f_i$, $G = \sum_{i=0}^t f_i$, $f = f_t$ and $\alpha = \frac{1}{\eta}$, 
+we get that
+$$f_t(w_t) - f_t(w_{t+1}) \leq \eta \sum_{t=1}^T ||\nabla f_t(w_t)||_*^2.$$
+ Hence, 
+\begin{equation*}
+    \begin{split}
+R & \leq f_0(w^*) - f_0(w_1) + \eta \sum_{t=0}^T ||\nabla f_t (w_t)||^2_*\\
+& \leq \frac{D}{\eta} + \eta \sum_{t=0}^T ||\nabla f_t(w_t)||^2_*.
+    \end{split}
+\end{equation*}
+If $||\nabla f_t(w_t)||^2_* \leq G$ then $R \leq \frac{D}{\eta} + \eta TG^2$. Setting $\eta = \sqrt{\frac{D}{TG^2}}$ gives $R \leq 2G\sqrt{TD}$. \qed 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

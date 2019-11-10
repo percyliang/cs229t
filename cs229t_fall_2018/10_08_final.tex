@@ -1,0 +1,315 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+% \usepackage[margin=1in]{geometry}
+\usepackage[utf8]{inputenc}
+% \usepackage{optidef}
+\usepackage{enumerate}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{bm}
+    
+\newcommand{\argmax}{\mathop{\mathrm{argmax}}}
+\newcommand{\sign}{\mathop{\mathrm{sgn}}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\var}[1]{\mathrm{Var}\left[{#1}\right]}
+\newcommand{\ex}[1]{\mathbb{E}\left[{#1}\right]}
+\newcommand{\exu}[2]{\mathbb{E}_{#1}\left[{#2}\right]}
+\newcommand{\pp}[1]{\mathbb{P}\left[{#1}\right]}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\reals}{\mathbb{R}}
+\newcommand{\ip}[1]{\left\langle{#1}\right\rangle}
+\newcommand{\ones}{\mathbf{1}}
+\newcommand{\fancyx}{\mathcal{X}}
+\newcommand{\eqd}{\overset{d}{=}}
+\newcommand{\tod}{\overset{d}{\to}}
+\newcommand{\upto}{\uparrow}
+\newcommand{\downto}{\downarrow}
+\newcommand{\complex}{\mathbb{C}}
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+\pagestyle{plain}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+%\draftnotice
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture 5               %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Guillermo Angeris, Saachi Jain                  %%% FILL IN YOUR NAME HERE
+\hfill
+Oct 8, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Wrap up of concentration inequalities}
+
+Let $Z = \sum_i X_i$ with $X_i$ independent. Then we can bound the log of the tail probabilities via the following inequality:
+\begin{equation}\label{eq:equation1}
+  \log \pp{Z - \ex{Z} \ge t} \le \inf_{\lambda \ge 0} \left(\sum_i \log \ex{e^{\lambda(X_i - \ex{X_i})}} - \lambda t\right),
+\end{equation}
+
+Where $\ex{e^{\lambda(X_i - \ex{X_i}}}$ is our moment-generating function. The proof follows by taking the exponential of the inequality in the probability and using Markov's inequality. This inequality therefore depends crucially on the MGF. We can get a rough idea of how this bound behaves by taking the Taylor series:
+\[
+  \log \pp{Z - \ex{Z} \ge t} \le \inf_{\lambda \ge 0} \left(\sum_i \log \underbrace{\ex{e^{\lambda(X_i - \ex{X_i}}}}_{\approx 1 + \lambda^2 \var{X_i}} - \lambda t\right),
+\]
+
+Let's derive these bounds for some examples (MGF).
+
+\subsection{Example 1: Gaussian}
+Let $X_i \sim N(\mu, \sigma^2)$. This bound is relatively straightforward to prove since the Gaussian is a stable distribution (see HW 0). However, we can also use Equation \ref{eq:equation1} to establish a tail bound. First, let's look at the MGF in this case:
+\[
+  M(\lambda) = \ex{e^{\lambda(X - \ex X)}}.
+\]
+Since $X - \ex X \sim N(0, \sigma^2)$, by taking the integral, we get:
+\[
+  \ex{e^{\lambda(X - \ex{X})}} = \int_\reals e^{\lambda x}e^{x^2/(2\sigma)^2} = e^{\sigma^2\lambda^2/2}
+\]
+so the log is just
+\[
+  \log \ex{e^{\lambda(X - \ex X)}} = \frac{\sigma^2\lambda^2}2.
+\]
+This matches is the result we expect from the heuristic up to constant scaling, since
+\[
+  \ex{e^{\lambda(X_i - \ex{X_i}}} \approx 1 + \lambda^2 \var{X} \implies \log \ex{e^{\lambda(X_i - \ex{X_i}}} \approx \lambda^2\sigma^2.
+\]
+Plugging back into the given bound at~(\ref{eq:equation1}), then yields
+\[
+  \log \pp{Z - \ex{Z} \ge t} \le \inf_{\lambda \ge 0} \left[\lambda^2 \sum_i \sigma_i^2/2 - \lambda t\right],
+\]
+and, computing the minimum yields
+\[
+  \inf_{\lambda \ge 0} \left[\lambda^2 \sum_i \sigma_i^2/2 - \lambda t\right] = -\frac{t^2}{2\sum_i \sigma_i^2},
+\]
+noting that $\var{Z} = 2 \sum_i \sigma_i^2$. Therefore
+\[
+  \pp{Z - \ex{Z} \ge t} \le \exp\left(-\frac{t^2}{2\sum_i \sigma_i^2}\right),
+\]
+
+\subsection{Example 2: Bounded random variables}
+Let $X_i \in [a_i, b_i]$, w.p.\ 1, then necessarily we have that
+\[
+  |X_i - \ex{X_i}| \le |b_i - a_i|.
+\]
+A first attempt at writing out the MGF yields
+\[
+  \log \ex{e^{\lambda(X_i - \ex{X_i})}} \le \log \ex{e^{\lambda(b_i - a_i)}} = \lambda(b_i - a_i).
+\]
+However, taking the inf then yields a term linear in $\lambda$ since
+\[
+  \log \pp{Z - \ex{Z} \ge t} \le \inf_{\lambda \ge 0} \left(\lambda\sum_i (b_i - a_i) - \lambda t\right)
+\]
+which leads to a trivial bound. Let $\sigma_i \equiv b_i - a_i$. We can try a slightly better bound by using the Taylor expansion:
+\begin{align*}
+  \log \ex{e^{\lambda(X - \ex{X})}} &= \log \left(1 + \lambda \ex{X_i - \ex{X_i}} + \frac{\lambda^2}{2}\ex{\left(X_i - \ex{X_i}\right)^2 } + \dots\right)\\
+                                    &\le \log \left( 1 + \frac{\lambda^2}{2}\ex{\left(X_i - \ex{X_i}\right)^2 } + \dots \right) \\
+                                    &\le \log \left(e^{\lambda \sigma_i } - \lambda \sigma_i\right)\\
+                                    &\le \lambda^2 \sigma_i^2
+\end{align*}
+where the last line comes from knowing that $e^t - t \le e^{t^2}$ ~\ref{eq:equation1}. In general, this doesn't quite yield optimal results (the inequality on the right can be improved to at least $\lambda^2\sigma_i^2/4$, but it's good up to constants). Note that we really mostly care that the inequality is smaller than some \textit{quadratic} in $\lambda$. This is the general definition of a sub-gaussian random variable.
+
+\begin{definition}
+  $X$ is ($\sigma$-)subgaussian r.v. with finite first moment and variance proxy $\sigma^2$ (note: this parameter is, in general, at least as large as the variance, but \textit{not necessarily equal}) if
+  \begin{equation}\label{eq:2}
+    \ex{e^{\lambda(X - \ex{X})}} \le e^{\sigma^2\lambda^2/2}, ~~  \lambda \in \reals.
+  \end{equation}
+\end{definition}
+Subgaussian variables have a nice tail bound: if $X$ is $\sigma$-subgaussian then this implies that (note that this only requires that~(\ref{eq:2}) hold for $\lambda \ge 0$),
+\[
+  \pp{X - \ex{X} \ge t} \le e^{-t^2/(2\sigma^2)}.
+\]
+In the case where~(\ref{eq:2}) holds not just for positive $\lambda$ but for all $\lambda$, we get that
+\[
+  \pp{X - \ex{X} \le -t} \le e^{-t^2/(2\sigma^2)},
+\]
+where the proof is identical to the case of the positive tail.
+
+\begin{theorem}
+  If $X_i$ are independent and $\sigma_i$-subgaussian, then the variance proxy for $Z = \sum_i X_i$ is also subgaussian with proxy $\sum_i \sigma_i^2$. Putting this together, this yields
+  \[
+    \pp{Z - \ex{Z} \ge t}\le \exp\left(-\frac{t^2}{2\sum_i \sigma_i^2}\right).
+  \]
+\end{theorem}
+
+\begin{proof}
+  \[
+    \ex{e^{\lambda(Z - \ex Z)}} = \prod_i \ex{e^{\lambda(X_i - \ex {X_i})}} \le \prod_i e^{\lambda^2 \sigma_i^2/2} = \exp\left(\frac{\lambda^2 \sum_i \sigma_i^2}{2}\right)
+  \]
+\end{proof}
+
+\section{Rademacher Complexity}
+Let's briefly recall the setup: we care about uniform convergence. That is, we care about
+\[
+  \sup_{h \in H} |\hat L (h) - L(h)|.
+\]
+Which lets us prove our ``final goal,'' which is that w.p. $1 - \delta$, we have that
+\[
+  \sup_{h \in H} |\hat L (h) - L(h)| \le \mathrm{something}.
+\]
+
+For a moment, let's consider a weaker goal: what if we only care about the expectation, defining, as usual, that $z_i$ are the complete labelled points (e.g. $z_i = (x_i, y_i)$) for simpler notation:
+\[
+  \exu{\{z_i\}}{\sup_{h \in H} |\hat L (h) - L(h)|} \le ~\mathrm{something}.
+\]
+If we do have this, then we can just apply Markov's inequality to talk about bounds.
+
+\begin{definition}
+  Let $F$ be a family of real-valued functions $f:Z \to \reals$, where $Z = X \times Y$ (in the set sense). Then the Rademacher complexity of $F$ is defined as
+  \[
+    R_n(F) \equiv \exu{\{z_i\}}{\exu{\{\sigma_i\} \sim \{-1, +1\}^n}{\sup_{f \in F} \frac{1}{n}\sum_i \sigma_i f(z_i)}}.
+  \]
+\end{definition}
+
+In some sense, this is how much the output $f(z_1), \dots, f(z_n)$ can be correlated with a random pattern $\{\sigma_i\}\sim \{-1, +1\}^n$, if we're able to pick any function $f$ from the family of functions.\footnote{If we can correlate arbitrary patterns, given i.i.d.\ inputs (over our space of inputs), this indicates that our class of functions, $F$, is fairly complete w.r.t.\ the distribution of inputs.}
+
+\begin{theorem}\label{theorem2}
+  \[
+    \exu{\{z_i\}}{\sup_{f \in F} \frac{1}{n}\sum_i\left( f(z_i) - \exu{z \sim p}{f(z)}\right)} \le 2R_n(F)
+  \]
+\end{theorem}
+
+\begin{corollary}
+  \label{corollary:abs}
+  Let $F = \{z = (x, y) \mapsto \ell(z, h) : h \in H\}$, which is a family of losses, then, applying the statement above yields
+  \begin{align*}
+    & \quad \exu{\{z_i\}}{\sup_{h \in H} \left|\frac{1}{n}\sum_i\left( \ell(z_i, h) - \exu{z \sim p}{\ell(z, h)}\right)\right|} = \exu{\{z_i\}}{\sup_{h \in H} |\hat L (h) - L(h)|} \\
+    & \le 2R_n(F\cup F^-) = 2\exu{\{\sigma_i,z_i\}}{\sup_{h\in H}\left| \frac{1}{n}\sum_{i=1}^n\sigma_i\ell(z_i,h) \right|},
+  \end{align*}
+  where $F^- = \{-f~|~f\in F\}$ is the negative family of functions.
+\end{corollary}
+This variant is obtained by applying Theorem \ref{theorem2} to the family $F\cup F^-$. See Section~\ref{section:abs} for a detailed version of this argument. We also note that this Corollary is not necessarily needed for the final bound for the excess risk. See the proof in Theorem 3 of scribe notes 6 for a way to avoid bounding $\exu{\{z_i\}}{\sup_{h \in H} |\hat L (h) - L(h)|}$.  
+\vspace{0.2in}
+
+This implies that
+\[
+  \text{generalization error} \precsim \text{how well losses can be correlated with random sign patterns}.
+\]
+
+Of course, the correlation in this case depends heavily on the
+distribution that we draw samples from (e.g. a simple counterexample
+to our intuitive notion of `generalization error' is to set $p$ to be
+a single point mass at any one point, then $R_n(F)\to 0$ as
+$n\to\infty$ in a way that does not depend on the particular choice of
+$p$). Returning to Theorem 2, we can give a proof by symmetrization.
+\begin{proof}
+  Fix $z = \{z_1, \dots, z_n\}$, and let's look at
+  \begin{align*}
+    \sup_{f \in F}\left( \frac1n \sum_i f(z_i) - \ex{f}\right) &= \sup_{f \in F} \left(\frac1n \sum_i f(z_i) - \exu{z'}{\frac1n \sum_i f(z_i')}\right)\\
+                                                               &= \sup_{f \in F} \exu{z'}{\frac1n \sum_i f(z_i) - \frac1n \sum_i f(z_i')}\\
+                                                               &\le \exu{z'}{\sup_{f \in F} \left(\frac1n \sum_i f(z_i) - \frac1n \sum_i f(z_i')\right)},
+  \end{align*}
+  where the inequality is by Fatou's lemma. Therefore, taking the expectation of both sides yields
+  \begin{align*}
+    \exu{z}{\sup_{f \in F} \frac1n \sum_i f(z_i) - \ex{f}}\\
+    &\le \exu{z}{\exu{z'}{\sup_{f \in F}\frac1n \sum_i \left(f(z_i) - f(z_i')\right)}}.
+  \end{align*}
+  Here, note that $f(z_i) - f(z_i') \eqd \sigma_i(f(z_i) - f(z_i'))$, for $\sigma_i \sim \{\pm 1\}$, so the expectations must all be equivalent, e.g.
+  \[
+    \exu{z, z'}{\sup_{f \in F}\left(\frac1n \sum_i \left(f(z_i) - f(z_i')\right)\right)} = \exu{\sigma, z, z'}{\sup_{f \in F}\left( \frac1n \sum_i \sigma_i\left(f(z_i) - f(z_i')\right)\right)}. 
+  \]
+  Finally, noting that, for any functions $a, b$
+  \[
+    \sup_z \left(a(z) - b(z)\right) \le \sup_z a(z) + \sup_{z'} (-b(z')),
+  \]
+  and that $-\sigma_i \eqd \sigma_i$, then
+  \begin{align*}
+    & \exu{\sigma, z, z'}{\sup_{f \in F}\left( \frac1n \sum_i \left(f(z_i) - f(z_i')\right)\right)} \\
+    &\le \exu{\sigma, z, z'}{\sup_{f \in F}\left( \frac1n \sum_i \sigma_if(z_i)\right)} + \exu{\sigma, z, z'}{\sup_{f \in F}\left( \frac1n \sum_i -\sigma_if(z_i)\right)} \\
+                                                                                                  &= 2 \exu{\sigma, z, z'}{\sup_{f \in F}\left( \frac1n \sum_i \sigma_if(z_i)\right)} \\
+                                                                                                  &= 2 R_n(F).
+  \end{align*}
+\end{proof}
+
+\subsection{Dealing with the absolute value}
+\label{section:abs}
+We now show Corollary~\ref{corollary:abs} from Theorem~\ref{theorem2}. Let us define $F^-=\{-f~|~f\in F\}$, then we have
+\begin{align*}
+  & \quad \exu{z}{\sup_{f\in F}|\hat{L}(f) - L(f)|} = \exu{z}{\max\left\{\sup_{f\in F}\hat{L}(f) - L(f), \sup_{f\in F}\hat{L}(-f) - L(-f)\right\}} \\
+  & = \exu{z}{\max\left\{\sup_{f\in F}\hat{L}(f) - L(f), \sup_{f\in F^-}\hat{L}(f) - L(f)\right\}} \\
+  & \le 2R_n(F\cup F^-) \\
+  & = 2\exu{\sigma,z}{\sup_{f\in F\cup F^-}\frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)} = 2\exu{\sigma,z}{\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right| },
+\end{align*}
+where we have applied Theorem~\ref{theorem2} on the class $F\cup F^-$. 
+
+If $F$ contains the all 0 function, it turns out that we can further bound this by the standard Rademacher complexity of $f$ as shown in the following lemma. The lemma is also useful for Lecture 8 in week 4 when we compute the Rademacher complexity of neural networks. We also note that the lemma below is not true without the assumption that $f_0\in F$. (In the lecture, I (Tengyu) claimed this incorrectly.)
+\begin{lemma}
+	Let $f_0$ denote the all 0 function, and suppose $f_0 \in F$. Then
+	\begin{align*}
+		\exu{\sigma,z}{\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|} \le 2R_n(F)
+	\end{align*}
+\end{lemma}
+\begin{proof}
+	By the definition of supremum and infimum, and since $\bm{0} \in F$, we have 
+	\begin{align*}
+		\exu{\sigma,z}{\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|} \le & \exu{\sigma,z}{\left| \frac{1}{n}\sum_{i=1}^nf_0(z_i)\right|} +\\ & \exu{\sigma,z}{\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right| - \inf_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|} \\
+		\le &  \exu{\sigma,z}{\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right| - \inf_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|}
+	\end{align*}
+	Next, we argue that for any choice of $\sigma, z$, 
+	\begin{align*}
+		\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right| - \inf_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right| \le \sup_{f\in F} \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i) - \inf_{f\in F}\frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)
+	\end{align*}
+	The simplest way to see this is casework on the signs of $\frac{1}{n}\sum_{i = 1}^n \sigma_i f(z_i)$ achieving the supremum and infimum. Let $s_1$ be the sign of $\frac{1}{n}\sum_{i = 1}^n \sigma_i f(z_i)$ that achieves the supremum, and $s_2$ be the sign of the value achieving the infimum. 
+	\begin{enumerate}[\textup{Case} 1)]
+		\item $s_1 < 0, s_2 < 0$. In this case, $\inf_{f \in \mathcal{F}} \frac{1}{n} \sum_{i = 1}^n \sigma_i f(z_i) \le -\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|$, and $ \sup_{f\in F} \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i) \ge -\inf_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|$. Subtracting the former from the latter gives the desired statement. 
+		\item $s_1 < 0, s_2 \ge 0$. Again, $\inf_{f \in \mathcal{F}} \frac{1}{n} \sum_{i = 1}^n \sigma_i f(z_i) \le -\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|$. Also, $ \sup_{f\in F} \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i) \ge 0$. Again subtracting the former from the latter gives the desired statement.
+		\item $s_1 \ge 0, s_2 < 0$. Now $\sup_{f\in F} \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i) \ge \sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|$. Furthermore, $\inf_{f \in \mathcal{F}} \frac{1}{n} \sum_{i = 1}^n \sigma_i f(z_i) \le 0$. Subtracting the latter from the former gives the desired statement. 
+		\item $s_1 \ge 0, s_2 \ge 0$. Now $\sup_{f\in F} \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i) \ge \sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|$. Furthermore, $\inf_{f \in \mathcal{F}} \frac{1}{n} \sum_{i = 1}^n \sigma_i f(z_i) \le \inf_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|$. Subtracting the latter from the former gives the desired statement.
+	\end{enumerate}
+	Thus, it follows that 
+	\begin{align*}
+		\exu{\sigma,z}{\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|} \le \exu{\sigma, z}{\sup_{f\in F} \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i) - \inf_{f\in F}\frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)}
+	\end{align*}
+	Now we note that $\inf_{f\in F}\frac{1}{n}\sum_{i=1}^n\sigma_if(z_i) = -\sup_{f \in F}	-\frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)$. Since $-\sigma_i$ and $\sigma_i$ follow the same distribution, we conclude that 
+	\begin{align*}
+	\exu{\sigma, z}{\inf_{f\in F}\frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)} = -\exu{\sigma, z}{\sup_{f\in F}\frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)}
+	\end{align*}
+	Plugging this into before, 
+	\begin{align*}
+	\exu{\sigma,z}{\sup_{f\in F}\left| \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)\right|} \le 2 \exu{\sigma, z}{\sup_{f\in F} \frac{1}{n}\sum_{i=1}^n\sigma_if(z_i)} = 2R_n(F)
+	\end{align*}
+\end{proof}
+\end{document}
+    

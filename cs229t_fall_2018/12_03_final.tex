@@ -1,0 +1,287 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage[utf8]{inputenc}
+
+\newcommand{\E}{\mathop{\mathbb{E}}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\CP}{\mathbb{CP}}
+\newcommand{\D}{\mathbb{D}}
+
+\newtheorem{cor}{Corollary}
+\newtheorem{lem}{Lemma}
+\newtheorem{prop}{Proposition}
+\newtheorem{thm}{Theorem}
+
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\Res}{\mathrm{Res}}
+\newcommand{\Inv}{\mathrm{Inv}}
+\newcommand{\Aut}{\mathrm{Aut}}
+
+\newcommand{\indist}{\xrightarrow{d}}
+\newcommand{\ra}{\rightarrow}
+\newcommand{\lra}{\leftrightarrow}
+\newcommand{\Ra}{\Rightarrow}
+\newcommand{\nra}{\nrightarrow}
+\newcommand{\mt}{\mapsto}
+\newcommand{\se}{\simeq}
+\newcommand{\tpi}{2 \pi i}
+\newcommand{\te}{\triangleq}
+
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+
+\pagestyle{plain}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+% \draftnotice
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture \# 10           %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Eric Wang (ejwang)               %%% FILL IN YOUR NAME HERE
+\hfill
+December 3, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Review}
+Last time, we talked about the UCB algorithm
+and the constant multi-armed bandit problem.
+In this lecture we'll give the regret bound analysis for that problem
+and talk about the Bayesian regret setting.
+
+Last time, we defined the \textit{lower confidence bound}
+\begin{align*}
+  LCB_t*(a) = \hat \mu_{t - 1}(a) = 2\sqrt{\frac{\log T}{n_{t - 1}a}}.
+\end{align*}
+We choose the action $a_t$ according to the LCB:
+\begin{align*}
+  a_t = \arg \min_{a \in [n]} LCB_t(a).
+\end{align*}
+We call this principle ``optimism in the face of uncertainty'';
+we're looking at the most optimistic outcome consistent with the existing data.
+We claimed that this is a reasonable confidence bound:
+\textit{for any action $a$ with probability $> 1 - \frac{1}{T}$, 
+for all t in $\left\{ 1, \dots, T \right\}$ we have 
+\begin{align*}
+  |\hat \mu_t(a) - \mu(a)| \leq 2\sqrt{\frac{\log T}{n_t(a)}}, \\
+  \mu(a) = \left[ \hat \mu(a) - 2\sqrt{\frac{\log T}{n_t (a)}}, \hat \mu_t(a) + 2 \sqrt{\frac{\log T}{n_t(a)}} \right].
+\end{align*}
+}
+This can be viewed as a confidence interval that scales as $1/\sqrt{n}$.
+Finally, we had this theorem:
+\begin{thm}
+  The regret of the UCB algorithm is bounded above by
+  \begin{align*}
+    \sum_{a : \Delta a > 0} O\left( \frac{\log T}{\Delta a} \right).
+  \end{align*}
+  (In comparison, the explore-then-exploit algorithm has regret $\sum O\left( \frac{\log T \cdot \Delta a}{\Delta^2} \right)$).
+\end{thm}
+Recall that $\Delta a = \mu(a) - \mu(a^*)$, $\Delta = \min_{a : \Delta a > 0}\Delta a$. 
+Hence $\sum O\left( \frac{\log T \cdot \Delta a}{\Delta^2} \right) \geq \sum O\left( \frac{\log T}{\Delta a} \right)$.
+The proof is pretty straighforward given the earlier claim:
+\begin{proof}
+  Recall that the regret is equal to 
+  \begin{align*}
+    \sum[n_T(a)] \cdot \Delta a.
+  \end{align*}
+  Thus it suffices to show that $\E\left[ n_T(a) \right] \geq O(\frac{\log T}{\delta a^2})$ for all $a$.
+  Fix one such $a$.
+  We define $T_0$ analogously in the explore-and-exploit algorithm:
+  \begin{align*}
+    T_0 \te \frac{20 \log T}{\Delta a^2}; \E\left[ n_T(a) \right] \leq T_0 + \sum_{t = T_0}^T \E\left[ \mathbf{1}(a_t = a, n_{t - 1}(a) \geq T_0) \right].
+  \end{align*}
+  This is because
+  \begin{align*}
+    \E\left[ n_T(a) \right] &=  \E\left[ \sum_{t = 1}^T \mathbf{1}(a_t = a) \right] \\
+    &= \sum_{t = 1}^T \E\left[ \mathbf{1}(a_t = a, n_{t - 1}(a) < T_0) \right] + \sum_{t = 1}^T E\left[ \mathbf{1}(a_t = a, n_{t - 1}(a) \geq T_0) \right]
+  \end{align*}
+  Suppose the events $E_a, E_{a^*}$ in the claim happen.
+  Then 
+  \begin{align*}
+    LCB_t(a^*) &\leq \mu(a^*) \\
+    LCB_t(a) &= \hat \mu_{t - 1}(a) - 2\sqrt{\frac{\log T}{n_{t - 1}(a)}}\\
+    &\geq \mu(a) - 2\sqrt{\frac{\log T}{n_{t - 1}(a)}} - 2\sqrt{\frac{\log T}{n_{t - 1}(a)}}\\
+    &\geq \mu(a^*) + \Delta a - 4\sqrt{\frac{\log T}{n_{t - 1}(a)}}\\
+    &\geq \mu(a^*) + \Delta a - 4 \sqrt{\frac{\log T}{T_0}}\\
+    &> \mu(a^*)
+  \end{align*}
+  Hence $LCB_t(a) \geq LCB_t(a^*)$ and $a_t \neq a$.
+  Therefore
+  \begin{align*}
+    \E\left[ n_T(a) \right] 
+    &\leq T_0 + \sum_{t = 1}^T \Pr\left[ \overline {E_a \wedge E_{a^*}} \right]\\
+    &\leq T_0 + \frac{2}{T} (T - T_0)\\
+    &\leq T_0 + 2 \leq 2T_0 \leq O\left( \frac{\log T}{\Delta a^2} \right).
+  \end{align*}
+  
+
+\end{proof}
+Last time, we provided an informal proof of the claim using Hoeffding's inequality.
+However, the conditions of Hoeffding's inequality weren't actually satisfied.
+The number of random variables was itself a random variable, for instance.
+We can get around that by using a high-probability bound:
+
+\section{Rigorizing the proof from last time}
+Consider the following provess:
+\begin{itemize}
+  \item Generate $Z_1, \dots, Z_T \sim D_a$ in advance, before the game starts.
+  \item Every time action $a$ is taken, return the next unused $Z_j$ as a loss.
+    \begin{align*}
+      \ell_t(a) \te Z_{n_{t - 1}(a) + 1}.
+    \end{align*}
+\end{itemize}
+
+Although the process of generation is very complicated,
+the process of generating the $Z$s is still independent.
+Now, by Hoeffding's inequality and the union bound,
+\begin{align*}
+  \forall j = 1, \dots, T: \left|\frac{1}{j}\sum_{k = 1}^j Z_k - \mu(a)\right| \leq 2\sqrt{\frac{\log T}{j}}.
+\end{align*}
+Hence
+\begin{align*}
+  \hat \mu_t(a) - \frac{1}{n_t(a)}\sum_{i = 1}^T \ell_i(a)\mathbf{1} (a_i = a)
+  &= \frac{1}{n_t(a)} \sum_{j = 1}^{n_{t}(a)} Z_j
+\end{align*}
+and $|\hat \mu_t(a) - \mu(a)| \leq 2\sqrt{\frac{\log T}{n_t(a)}}$, completing the proof.
+
+\section{Bayesian Multi-Armed Bandit Problem}
+\textbf{The general stochastic bandit problem:}
+We have:
+\begin{itemize}
+  \item A model parameter $\theta \in \Theta$. In the original problem, this was $\mu(1),\dots,\mu(N)$.
+  \item An action $a$ in a family $\mathcal{A}$. In the original problem, this was $a \in [N]$.
+  \item A distribution of loss, $D(a, \theta)$. In the original problem, this was $D_a$.
+\end{itemize}
+There is a ground truth parameter, $\theta^*$.
+Now, at time $t$, if action $a_t$ is chosen, 
+we observe a loss $L_{a_t, \theta^*} \sim D(a, \theta^*)$.
+The \textit{optimal action} is a function
+\begin{align*}
+  a^* : \Theta \ra \mathcal{A} \textrm{ such that} \\
+  a^*(\theta) = \arg \min_{a \in \mathcal{A}} \E_{L \sim D(a, \theta^*)}[L].
+\end{align*}
+For simplicity, we work with unique optimal actions.
+In the multi-armed bandit problem, this was equal to $\arg \min_{a \in [n]} \mu(a)$.
+For a ground truth $\theta^*$ and actions $a_1, \dots, a_T$,
+we define
+\newcommand{\Regret}{\mathrm{Regret}}
+\begin{align*}
+  \Regret(\theta^*, a, \dots, a_T) 
+  &= \E_{L_{a_t, \theta^*} \sim D(a_t, \theta^*); L_{a^*_t, \theta^*}\sim D(a^*(\theta^*), \theta^*}\left[ \sum_t L_{a_t, \theta^*} - \sum_t L_{a^*(\theta^*), \theta^*} \right].
+\end{align*}
+We now turn to the Bayesian setting, 
+where $\theta^*$ is posited to be drawn from some distribution $Q$, 
+the \textit{prior of the model parameter}.
+Let $A_1, \dots, A_T$ be the actions taken by the algorithm.
+Then the Bayesian regret of the algorithm is defined as follows:
+\begin{align*}
+  \Regret &=\E_{\theta^* \sim Q} \left[ \E_{A_1, \dots, A_T} \left[ \Regret(\theta^*, A_1,\dots,A_T) \right] \right]
+  &= \E_{\cdots} \left[ \sum_t L_{a_t, \theta^*} - \sum_t L_{a^*(\theta^*), \theta^*} \right]
+\end{align*}
+There's nothing special about this formulation. But this is a reasonable setting, and 
+it exhibits some fairly nice behavior.
+
+\section{Solving the Bayesian MAB problem}
+One algorithm is \textit{Thompson sampling}.
+``Repeatedly updating the posterior, 
+drawing ground truth from the posterior, 
+then playing the best action according to that truth.''
+
+Let $\mathcal{F}_{t - 1}$ as shorthand for the random variables observed so far:
+\begin{align*}
+  \mathcal{F}_{t - 1} = \left\{ A_1, L_1, \dots, A_{t - 1}, L_{t - 1} \right\}.
+\end{align*}
+
+On each iteration,
+\begin{itemize}
+  \item Compute the distribution
+    \begin{align*}
+      p_r(\theta) = \Pr(\theta^* = \theta | \mathcal{F}_{t - 1}).
+    \end{align*}
+    This is the posterior of $\theta^* | \mathcal{F}_{t - 1}$.
+  \item Sample $\theta_t \sim p_t$.
+  \item Play $a^*(\theta_t)$.
+\end{itemize}
+Next time, we'll bound the regret of Thompson sampling,
+as determined in a paper by [Russo and van Roy, '16].
+
+\section{Info Theory Background}
+(We need this to even state our bound.)
+Let $\mathcal{X}$ be a finite set
+and let $X$ be a random variable over $\mathcal{X}$. 
+The \textit{entropy} of $X$ is a measure of the amount of uncertainty,
+and it is given by
+\begin{align*}
+  H(X) = -\sum_{x \in \mathcal{X}} Pr(X = x) \log \Pr(X = x).
+\end{align*}
+It is a fact that $0 \leq H(X) \leq \log |X|$ and this follows from the concavity of the logarithm.
+
+Let $X, Y$ be random variables,
+The \textit{conditional entropy}  $H(X | Y)$ is defined as
+\begin{align*}
+  \sum_y H(X | Y = y) \Pr(Y = y).
+\end{align*}
+We define the \textit{mutual information} or ``entropy reduction'' between $X$ and $Y$ is
+\begin{align*}
+  I(X; Y) \te H(X) - H(X|Y).
+\end{align*}
+\textit{``How much entropy have I lost by observing Y?''}
+
+\subsection{Properties of conditional information and mutual information}
+\begin{itemize}
+  \item $H(X|Y) = H((X, Y)) - H(Y)$.
+  \item $I(X; Y) = I(Y; X) = H(X) + H(Y) - H(X, Y)$
+  \item $I(X; Y) \geq 0 \Leftrightarrow H(X | Y) \leq H(x)$
+  \item $I(X; Y) \geq H(X)$ (because $H(X|Y) \geq 0$).
+  \item $I(X; Y) = 0 \Leftrightarrow X, Y$ independent.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

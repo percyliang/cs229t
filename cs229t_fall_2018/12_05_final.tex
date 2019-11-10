@@ -1,0 +1,448 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+
+\pagestyle{plain}
+
+% Extra preamble ------------------------------
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb,amsfonts}
+\allowdisplaybreaks
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{definition}{Definition}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{remark}{Remark}[theorem]
+\newtheorem{fact}{Fact}
+
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\E}{\mathbb{E}}
+\DeclareMathOperator{\reg}{regret}
+
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\usepackage{biblatex}
+\usepackage{filecontents}
+\begin{filecontents*}{general.bib}
+@article{RussoRoy,
+ author = {Russo, Daniel and Van Roy, Benjamin},
+ title = {An Information-theoretic Analysis of Thompson Sampling},
+ journal = {J. Mach. Learn. Res.},
+ issue_date = {January 2016},
+ volume = {17},
+ number = {1},
+ month = jan,
+ year = {2016},
+ issn = {1532-4435},
+ pages = {2442--2471},
+ numpages = {30},
+ url = {http://www.jmlr.org/papers/volume17/14-087/14-087.pdf},
+ acmid = {3007021},
+ publisher = {JMLR.org},
+ keywords = {Thompson sampling, information theory, mutli-armed bandit, online optimization, regret bounds},
+}
+\end{filecontents*}
+\addbibresource{general.bib}
+\nocite{*}
+
+
+\begin{document}
+
+\thispagestyle{empty}
+
+% \draftnotice
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture 20               %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Chris Lin, Anand Avati       %%% FILL IN YOUR NAME HERE
+\hfill
+December 05, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Review and Overview}
+
+In the last lecture, we introduced the general bandit problem in the Bayesian setting. Recall the following problem setup.
+
+\begin{itemize}
+    \item Let $\Theta$ be the model parameter space and $\theta^*$ the ground truth model parameter. Furthermore, let $Q$ be the prior distribution of $\theta^*$, i.e., $\theta^* \sim Q$. Unless otherwise stated, we assume $\Theta$ to be a finite set.
+    
+    \item Let $\mathcal{A}$ be the action space. Unless otherwise stated, we assume $\mathcal{A}$ to be a finite set.
+    
+    \item Let $D(a, \theta)$ be the distribution of loss for $a \in \mathcal{A}$ and $\theta \in \Theta$.
+    
+    \item At iteration $t$, if action $A_t$ is played, we observe the loss $L_{A_t, \theta^*} \sim D(A_t, \theta^*)$. For notational ease, we define $L_t \triangleq L_{A_t, \theta^*}$. The uppercase notation of $A_t$ emphasizes that $A_t$ is a random variable.
+    
+    \item The optimal action is a function $a^*: \Theta \rightarrow \mathcal{A}$ defined as
+    \begin{equation*}
+        a^*(\theta) = \argmin_{a \in \mathcal{A}} \E_{L \sim D(a, \theta)}[L].
+    \end{equation*}
+    With this, we also define the optimal action at the ground truth parameter
+    \begin{equation*}
+        A^* = a^*(\theta^*).
+    \end{equation*}
+    
+    \item Let $A_1, ..., A_T$ be the actions played at iterations $1, ..., T$. Define the regret as
+    \begin{equation*}
+        \reg  = \sum_{t=1}^T \E \Big[L_t - L_{A^*, \theta^*}\Big]
+    \end{equation*}
+    where the expectation is taken over all the random variables. In the Bayesian setting, the ground truth parameter $\theta^*$, the actions $A_1, ..., A_T$, and the losses $L_{A^*, \theta^*}, L_1, ..., L_T$ are all random variables.
+\end{itemize}
+
+We also described Thompson sampling for the general bandit problem in the Bayesian setting. At iteration $t$, the algorithm proceeds as:
+\begin{enumerate}
+  \setcounter{enumi}{-1}
+  \item Define $f_{t-1}$ as the collection of random variables observed so far. That is
+  \begin{equation*}
+      f_{t-1} = \{A_1, L_1, ..., A_{t-1}, L_{t-1}\}.
+  \end{equation*}
+  
+  \item Compute
+  \begin{equation*}
+      P_t(\theta) = \Pr(\theta^* = \theta | f_{t-1})
+  \end{equation*}
+  which is the posterior distribution of $\theta^* | f_{t-1}$.
+  
+  \item Sample $\theta_t$ from $P_t$.
+  
+  \item Play the action $a^*(\theta_t)$.
+\end{enumerate}
+
+Our goal is to provide a bound on the regret of Thompson sampling. To this end, we introduced some background on information theory. Let $\mathcal{X}, \mathcal{Y}$ be finite sets, and $X, Y$ be random variables over $\mathcal{X}, \mathcal{Y}$, respectively. We have the following definitions.
+
+\begin{itemize}
+    \item The entropy of $X$ is
+    \begin{equation*}
+        H(X) = - \sum_{x \in \mathcal{X}} \Pr(X = x) \log\Pr(X = x).
+    \end{equation*}
+    
+    \item The conditional entropy of $X|Y$ is 
+    \begin{equation*}
+        H(X|Y) = \sum_{y \in \mathcal{Y}} H(X|Y = y) \Pr(Y = y)
+    \end{equation*}
+    
+    \item The mutual information of $X$ and $Y$ is
+    \begin{equation*}
+        I(X;Y) = H(X) - H(X|Y)
+    \end{equation*}
+\end{itemize}
+
+We also have the following facts.
+\begin{fact}\label{basic_ineq}
+$0 \le H(X) \le \log|X|$.
+\end{fact}
+
+\begin{fact}\label{props}
+(Properties of entropy and mutual information)
+\begin{itemize}
+    \item $H(X|Y) = H((X, Y)) - H(Y)$.
+    
+    \item $I(X;Y) = I(Y;X) = H(X) + H(Y) - H((X, Y))$.
+    
+    \item $I(X;Y) \ge 0$, which is equivalent to $H(X|Y) \le H(X)$.
+    
+    \item $I(X;Y) \le H(X)$, which is equivalent to $H(X|Y) \ge 0$.
+    
+    \item $I(X;Y) = 0$ if and only if $X$ and $Y$ are independent.
+\end{itemize}
+\end{fact}
+
+In this lecture, we will finish our background introduction to information theory (Section 2), provide a bound on the regret of Thompson sampling and apply the bound to specific examples (Section 3), as well as summarize the course (Section 4).
+
+\section{Information Theory (Continued from Lecture 19)}
+
+We have the following definition for and a fact about conditional mutual information.
+\begin{definition}\label{cond_mi}
+Let $X,Y,Z$ be random variables. The conditional mutual information of $X,Y$ given $Z$ is
+\begin{equation*}
+    I(X;Y|Z) = H(X|Z) - H(X|Y,Z).
+\end{equation*}
+\end{definition}
+
+\begin{fact}\label{chain_rule}
+(Chain rule for conditional mutual information)
+
+Let $X, Y_1, ..., Y_n$ be random variables. Then
+\begin{equation*}
+    I(X;(Y_1, ..., Y_n)) = I(X;Y_1) + I(X;Y_2|Y_1) + \cdots + I(X;Y_n|Y_1, ..., Y_{n-1}).
+\end{equation*}
+\end{fact}
+\begin{proof}
+By applying the definition of conditional mutual information to each term on the RHS, we obtain
+\begin{align*}
+    & I(X;Y_1) + I(X;Y_2|Y_1) + \cdots + I(X;Y_n|Y_1, ..., Y_{n-1}) \\
+    & = [H(X) - H(X|Y_1)] + [H(X|Y_1) - H(X|Y_1, Y_2)]) + \cdots \\ 
+    & + [H(X|Y_1, ..., Y_{n-1}) - H(X|Y_1, ..., Y_n)] \\
+    & = H(X) - H(X|Y_1, ..., Y_n) \\
+    & = I(X;(Y_1, ..., Y_n))
+\end{align*}
+where the second equality comes from recognizing a telescoping sum, and the last equality from the definition of mutual information.
+\end{proof}
+
+It would be useful to relate mutual information to other distribution distance measures. We have the relationship between mutual information and KL divergence in the following fact.
+\begin{fact}\label{mi_kl}
+Let $X,Y$ be random variables, and $P_Y, P_X$ their respective marginal distributions. Then
+\begin{equation*}
+    I(X;Y) = \E_{y \sim P_Y} [KL(P_{X|Y = y} || P_X)]
+\end{equation*}
+\end{fact}
+\begin{proof}
+See  Appendix C of \cite{RussoRoy}.
+\end{proof}
+
+Finally, we finish our background introduction to information theory with a theorem on sequence of random variables.
+\begin{theorem}
+(Data processing inequality)
+
+Suppose the sequence of random variables $X \rightarrow Y \rightarrow Z$ is a Markov chain. Then 
+\begin{equation*}
+    I(X;Y) \ge I(X;Z).
+\end{equation*}
+\end{theorem}
+\begin{proof}
+By applying the chain rule for conditional mutual information in different orders, we get
+\begin{align}
+    I(X;(Y,Z)) & = I(X;Y) + I(X;Z|Y) \\
+    & = I(X;Z) + I(X;Y|Z).
+\end{align}
+
+By the definition of a Markov chain, we note that $X$ and $Z$ are independent conditioned on $Y$. Therefore $I(X;Z|Y) = 0$. By the properties of mutual information (Fact \ref{props}), we know that $I(X;Y|Z) \ge 0$. With these, comparing (1) and (2), we get
+\begin{equation*}
+    I(X;Y) \ge I(X;Z).
+\end{equation*}
+\end{proof}
+
+\begin{remark}
+This theorem is not necessary for proving the results in this lecture. It is discussed here for some more exposure to information theory.
+\end{remark}
+
+\begin{remark}
+For a particular joint distribution of $(X, Y)$, we can have $I(X;Y) \ge cI(X;Z)$ where $c > 1$ is a constant. This is called the strong data processing inequality. The stronger bound is a result of knowing more about the random variable distribution.
+\end{remark}
+
+\section{Regret Bound for Thompson Sampling}
+Armed with the above background on information theory, we now proceed to discuss the main goal of this lecture: providing a regret bound for Thompson sampling. The problem setup, notations, and definitions from Section 1 are carried forward in this section.
+
+In this section, we proceed in the following way. First, we define the notion of information ratio, which can be related to the regret such that bounding the information ratio implies bounding the regret. Second, we provide a bound for the information ratio, thereby bounding the regret. Finally, we apply these results to bound the regret for the multi-armed bandit problem and linear bandit problem in the Bayesian setting.
+
+We begin with defining the information ratio.
+\begin{definition}
+(Information ratio)
+
+With the setup in Section 1, the information ratio at iteration $t$ is
+\begin{equation*}
+    \Gamma_t = \frac{[\E[L_t - L_{A^*, \theta^*} | f_{t-1}]]^2}{I(A^*;(A_t, L_t)|f_{t-1})}.
+\end{equation*}
+\end{definition}
+
+\begin{remark}
+The numerator is the square of the regret term at iteration $t$, which is a random variable. The denominator is the conditional mutual information between the optimal action $A^*$ and $(A_t, L_t)$, conditioned on the previously observed actions and losses. Note that the denominator is a scalar.
+\end{remark}
+
+\begin{remark}
+Intuitively, the denominator is the amount of information gained about $A^*$ from observing $A_t$ and $L_t$. Therefore, a small information ratio is desirable. With a small information ratio, if an algorithm suffers a lot of regret, it also gains more information about the optimal action.
+\end{remark}
+
+With the notion of information ratio, we now discuss the main result of this lecture.
+\begin{theorem}\label{main}
+If for all $t = 1, ..., T$, $\Gamma_t \le \Gamma$ almost surely for some constant $\Gamma$, then
+\begin{equation*}
+    \reg \le \sqrt{\Gamma \cdot H(A^*) \cdot T}.
+\end{equation*}
+\end{theorem}
+\begin{proof}
+\begin{align*}
+    \reg & = \sum_{t=1}^T \E[L_t - L_{A^*, \theta^*}] \\
+    & = \sum_{t=1}^T \E_{f_{t-1}}\Big[\E[L_t - L_{A^*, \theta^*} | f_{t-1}] \Big] \text{ (law of total expectation)} \\
+    & \le \sum_{t=1}^T \E_{f_{t-1}} \Big[\Gamma^{\frac{1}{2}} \cdot I(A^*;(A_t, L_t) | f_{t-1})^{\frac{1}{2}}\Big] \text{ (definition of $\Gamma_t$, and $\Gamma_t \le \Gamma$)} \\
+    & \le \Gamma^{\frac{1}{2}} \sum_{t=1}^T \Big[\E[I(A^*;(A_t, L_t) | f_{t-1})]\Big]^{\frac{1}{2}} \text{ (Cauchy-Schwarz inequality)} \\
+    & \le \Gamma^{\frac{1}{2}} \cdot T^{\frac{1}{2}} \Bigg(\sum_{t=1}^T \E[I(A^*;(A_t, L_t) | f_{t-1})]\Bigg)^{\frac{1}{2}} \text{ (Cauchy-Schwarz inequality)} \\
+    & = \Gamma^{\frac{1}{2}} \cdot T^{\frac{1}{2}}\Bigg(\sum_{t=1}^T I(A^*;(A_t, L_t)|f_{t-1})\Bigg)^{\frac{1}{2}} \text{ (the mutual information is a scalar)} \\
+    & = \Gamma^{\frac{1}{2}} \cdot T^{\frac{1}{2}} \cdot I(A^*;(A_1, L_1, ..., A_T, L_T))^{\frac{1}{2}} \text{ (chain rule)} \\
+    & \le \Gamma^{\frac{1}{2}} \cdot T^{\frac{1}{2}} \cdot H(A^*)^{\frac{1}{2}} \text{ (Fact \ref{props})}
+\end{align*}
+\end{proof}
+
+This theorem shows that the regret can be bounded based on a bound on the information ratio. We will then discuss two lemmas that lead to a useful bound on the information ratio. For the remaining exposition, we simplify the notations in the following way: let $p_t$ be the distribution of $\theta^* | f_{t-1}$, and $q_t$ be the distribution of $A^* | f_{t-1}$.
+
+It is worthy to mention an insight here. Recall that in Thompson sampling, the algorithm computes $p_t$, draws $\theta_t$ from $p_t$, and sets $A_t = a^*(\theta_t)$ (all of these are conditioned on $f_{t-1}$). Therefore, $A_t|f_{t-1}$ has the same distribution as $q_t$. It follows that $A_t|f_{t-1}$ and $A^*|f_{t-1}$ are identically and independently distributed.
+
+We now proceed to the lemmas.
+\begin{lemma}\label{lem1}
+Assume $L_{a, \theta} \in [0,1]$ almost surely for all $a \in \mathcal{A}, \theta \in \Theta$. Suppose $A^*$ follows the distribution $q$, and $A \sim q$ is independent from $A^*$. Let $L \sim D(A, \theta^*)$ where $\theta^* \sim p$. Define the matrix $M \in \mathbb{R}^{|\mathcal{A}| \times |\mathcal{A}|}$ as 
+\begin{equation*}
+    M_{a,a'} = \sqrt{q(a)q(a')} \cdot \Big[\E[L_{a,\theta^*} | A^* = a'] - \E[L_{a,\theta^*}]\Big].
+\end{equation*}
+Then 
+\begin{equation*}
+    I(A^*;(A,L)) \ge \norm{M}_F^2.
+\end{equation*}
+\end{lemma}
+Note: In class we had defined $M$ with absolute value, as $$M_{a,a'} = \sqrt{q(a)q(a')} \cdot \Big|\E[L_{a,\theta^*} | A^* = a'] - \E[L_{a,\theta^*}]\Big|.$$ This change in the lecture notes is necessary for the proof of Lemma 3.3. Also, in the original paper $M$ is defined without absolute value \cite{RussoRoy}.
+
+\begin{proof}
+\begin{align*}
+    I(A^*;(A,L)) & = I(A^*;L|A) + I(A^*;A) \text{ (chain rule)}\\
+    & = I(A^*;L|A) \text{ ($A^*$ and $A$ are independent)} &\\
+    & = \sum_{a \in \mathcal{A}}q(a)I(A^*;L|A = a) \text{ (definition)} \\
+    & = \sum_{a \in \mathcal{A}}q(a)I(A^*;L_{a,\theta^*}) \text{ ($A^*$ and $A$ are independent; $L_{A, \theta^*} \sim D(A, \theta^*)$)} \\
+    & = \sum_{a \in \mathcal{A}}q(a) \sum_{a' \in \mathcal{A}} q(a') KL\Big(P_{L_{a, \theta^*|A^* = a'}} || P_{L_{a,\theta^*}}\Big) \text{ (Fact \ref{mi_kl})} \\
+    & \ge \sum_{a \in \mathcal{A}}q(a) \sum_{a' \in \mathcal{A}}q(a')TV\Big(P_{L_{a, \theta^*|A^* = a'}}, P_{L_{a,\theta^*}}\Big)^2 \text{ (Pinsker inequality)}.
+\end{align*}
+
+Recall that $TV(p,q) = \inf_{0 \le f \le 1} |\E_p f - \E_q f|$. Taking $f = \E[L_{a, \theta^*}] \in [0,1]$ in
+\begin{equation*}
+    TV\Big(P_{L_{a, \theta^*|A^* = a'}}, P_{L_{a,\theta^*}}\Big)
+\end{equation*}
+gives us a lower bound on the TV. It follows that
+\begin{align*}
+    I(A^*;(A,L)) & \ge \sum_{a \in \mathcal{A}}q(a) \sum_{a' \in \mathcal{A}} q(a') \Big[\E[L_{a,\theta^*}|A^* = a] - \E[L_{a,\theta^*}]\Big]^2 \\
+    & = \norm{M}_F^2
+\end{align*}
+\end{proof}
+\begin{remark}
+The setting in this lemma applies to each iteration of Thompson sampling, with the assumption that the loss is bounded between 0 and 1. 
+\end{remark}
+
+\begin{lemma}\label{lem2}
+In the same setting as Lemma \ref{lem1}, 
+\begin{equation*}
+    \E[L_{A,\theta^*} - L_{A^*, \theta^*}] = -trace(M).
+\end{equation*}
+\end{lemma}
+\begin{proof}
+(Omitted in class).
+
+
+Recall that $M_{a,a'}=\sqrt{q(a)q(a')} \cdot \Big[\E[L_{a,\theta^*} | A^* = a'] - \E[L_{a,\theta^*}]\Big]$.
+\begin{align*}
+    trace(M) &= \sum_{a \in \mathcal{A}} M_{a,a} \\
+    &= \sum_{a\in\mathcal{A}} \sqrt{q(a)q(a)}  \cdot \Big[\E[L_{a,\theta^*} | A^* = a] - \E[L_{a,\theta^*}]\Big] \\
+    &= \sum_{a\in\mathcal{A}} q(a)  \cdot \Big[\E[L_{a,\theta^*} | A^* = a] - \E[L_{a,\theta^*}]\Big] \\
+    &= \E_{a\sim q}\big[\E[L_{a,\theta^*}|A^*=a]\big] - \E_{a\sim q}\big[\E[L_{a,\theta^*}]\big] \\
+    &= \E[L_{A^*,\theta^*} - L_{A,\theta^*}]
+\end{align*}
+\end{proof}
+
+\begin{corollary}
+In the same setting as Lemma \ref{lem1}, the information ratio is upper bounded by $rank(M)$.
+\end{corollary}
+\begin{proof}
+We have the information ratio
+\begin{equation*}
+    \frac{[\E[L_{A,\theta^*} - L_{A^*, \theta^*}]]^2}{I(A^*;(A,L))} \le \frac{trace(M)^2}{\norm{M}_F^2} \le rank(M)
+\end{equation*}
+where the first inequality uses Lemmas \ref{lem1} and \ref{lem2}.
+\end{proof}
+
+We now apply the results to bound the regret of specific problems.
+
+\begin{corollary}
+Assume that the loss is bounded between 0 and 1. For the multi-armed bandit problem, we have the regret bound
+\begin{equation*}
+    \reg \le \sqrt{T \cdot |\mathcal{A}| \cdot \log|\mathcal{A}|}.
+\end{equation*}
+\end{corollary}
+\begin{proof}
+The information ratio is upper bounded by $rank(M)$, which is bounded by $|\mathcal{A}|$. By Fact \ref{basic_ineq}, $H(A^*) \le \log|\mathcal{A}|$. Applying these to Theorem \ref{main} gives the desired bound.
+\end{proof}
+
+\begin{corollary}
+Assume that the loss is bounded between 0 and 1. For the linear bandit problem with $\theta \in \mathbb{R}^d$, $a \in \mathbb{R}^d$ such that $\norm{\theta}_2 \le 1$, $\norm{a}_2 \le 1$, we have the regret bound
+\begin{equation*}
+    \reg \le d\sqrt{T\log T}.
+\end{equation*}
+\end{corollary}
+\begin{proof}
+We have $rank(M) \le d$. Consider the $\epsilon$-cover of the $L_2$ unit ball. Setting $\epsilon = 1 / O(T)$, we have
+\begin{align*}
+    |\mathcal{A}| &\le O(T)^d \\
+\Rightarrow H(A^*) &\le d\log T.
+\end{align*}
+Applying these to Theorem \ref{main} gives the desired bound.
+\end{proof}
+
+\section{Course Summary and Outlook}
+
+This concludes the CS229T/STATS231 course content. Let us quickly and briefly recap the entire course.
+\begin{itemize}
+    \item We started with the \textbf{asymptotic properties of the Maximum Likelihood Estimator}, and saw convergence at the rate of $O(1/n)$ in the well specified case. 
+    \item Then we moved on to \textbf{uniform convergence}. There we covered the non-asymptotic cases (finite sample), and relaxed the well-specified assumption. The penalty paid for this is that the convergence is only at the rate of $O(1/\sqrt{n})$. We covered how to get uniform convergence results using \textbf{Hoeffding inequality} in
+    \begin{itemize}
+        \item the \textbf{finite hypothesis} space (via union bound),
+        \item as well as in the \textbf{infinite hypothesis} space with \begin{itemize}
+            \item  discretization/$\epsilon$-net covers,
+            \item Rademacher complexity,
+            \item and VC-dimensions.
+        \end{itemize}
+    \end{itemize}
+     \item We also covered \textbf{Margin theory}, with a focus on its application to 2-layer feed-forward neural networks.
+     \item Then we moved on to the statistical theory of \textbf{GAN}s, with a focus on Wasserstein GANs. An important component was reasoning about what was the right theorem to prove. We again used Hoeffding's inequality.
+     \item The next section was \textbf{online learning}. Here we moved beyond the i.i.d. assumption (non-statistical), and saw the connection to \textbf{online convex optimization}.
+     \item The last topic was on \textbf{bandit problems}. Here we were back to statistical flavor. Finally we covered some \textbf{Information Theory} concepts in the context of analyzing \textbf{Thompson Sampling} in the Bayesian setting.
+\end{itemize}
+
+We did \emph{not} cover the following topics, given time constraints:
+
+\begin{itemize}
+    \item Kernel methods - these are approaches for non-linear models. With kernels we learn linear models in a high dimensional feature space (implicitly defined by kernels), but are non-linear in the original feature space.
+    \item Spectral methods - these are very theoretically elegant methods for unsupervised learning (particularly in clustering). Both spectral methods and kernel methods, though theoretically elegant, have recently fallen out of favor since other methods have demonstrated much stronger empirical performance.
+    \item Theories of Deep Learning - this field is also not mature enough to dedicate a full section on it. The core questions in the field are broadly around:
+    \begin{itemize}
+        \item Why do deep learning models even generalize (given that they have such a large number of parameters)?
+        \item Questions around optimization of their highly non-convex loss surfaces.
+    \end{itemize}
+\end{itemize}
+
+Looking forward, there are several aspects of statistical learning that justify further attention and research, such as:
+\begin{itemize}
+    \item Saftety.
+    \item Fairness.
+    \item Interpretability and Explainability.
+    \item Quantification of Uncertainty.
+\end{itemize}
+
+These are not only interesting, but also important aspects to study and improve, especially as machine learning methods make their way into our everyday lives in the form of self driving cars, automation, applications in law, healthcare etc. 
+
+With this, we conclude the course, and thank you for participating!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\printbibliography
+\end{document}

@@ -1,0 +1,225 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Template for creating scribe notes for cs229t. borrowed from Rob Schapire 
+%
+%  Fill in your name, lecture number, lecture date and body
+%  of scribe notes as indicated below.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[11pt]{article}
+
+\usepackage{amsmath,amssymb,amsthm,xcolor}
+\usepackage{mathtools}
+\DeclarePairedDelimiter\set{\{}{\}}
+\setlength{\topmargin}{0pt}
+\setlength{\textheight}{9in}
+\setlength{\headheight}{0pt}
+\setlength{\headsep}{0pt}
+\setlength{\oddsidemargin}{0.25in}
+\setlength{\textwidth}{6in}
+
+\newcommand{\draftnotice}{\vbox to 0.25in{\noindent
+   \raisebox{0.6in}[0in][0in]{\makebox[\textwidth][r]{\it
+    DRAFT --- a final version will be posted shortly}}}
+   \vspace{-.25in}\vspace{-\baselineskip}
+}
+
+\newcommand{\R}{\mathbb{R}}
+\renewcommand{\P}{\mathbb{P}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\WF}{W_{\cF}}
+\newcommand{\T}{^{\!\top\!}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}
+\newcommand{\GT}[1]{\textcolor{red}{Garrett: #1}}
+
+\pagestyle{plain}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+% \draftnotice
+
+\begin{center}
+\bf\large CS229T/STATS231: Statistical Learning Theory
+\end{center}
+
+\noindent
+Lecturer: Tengyu Ma   %%% FILL IN LECTURER (if not RS)
+\hfill
+Lecture \#12               %%% FILL IN LECTURE NUMBER HERE
+\\
+Scribe: Garrett Thomas, Pengda Liu                %%% FILL IN YOUR NAME HERE
+\hfill
+October 31, 2018           %%% FILL IN LECTURE DATE HERE
+
+\noindent
+\rule{\textwidth}{1pt}
+
+\medskip
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BODY OF SCRIBE NOTES GOES HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Review and Overview}
+Recall the GAN setup: we have independent samples $x_1, \dots, x_n$ drawn from some true (unknown) distibution $P$.
+Let $\hat{P}$ be the uniform distribution over these samples.
+
+We assume a latent variable $Z \sim P_Z$, for example $P_Z = \mathcal{N}(0,I)$.
+Let $P_\theta$ be the distribution of $G_\theta(Z)$.
+Our goal is to learn $\theta$ so that $P_\theta$ approximates $P$.
+For a fixed set of samples $z_1, \dots, z_n \sim P_Z$, we define $\hat{P}_\theta$ to be the uniform distribution over $\{G_\theta(z_1), \dots, G_\theta(z_n)\}$.
+
+In training, we will minimize the integral probability metric
+\[\WF(\hat{P}_\theta, \hat{P})\]
+where $\cF = \{f_\phi : \phi\in\R^p\}$.
+
+Ideally, a small $\WF(\hat{P}_\theta, \hat{P})$ would guarantee a small $W_1(P_\theta, P)$, and conversely a large $\WF(\hat{P}_\theta, \hat{P})$ would guarantee a large $W_1(P_\theta, P)$.
+That way, we know that the quantity being optimized (the empirical IPM) tells us something about the quantity we really care about (the Wasserstein distance of the true distributions).
+
+Our approach is to relate the following quantities:
+\[\WF(\hat{P}_\theta, \hat{P}) \longleftrightarrow \WF(P_\theta, P) \longleftrightarrow W_1(P_\theta, P)\]
+The first arrow is a question of \textit{generalization}: is the empirical IPM close to the population IPM?
+The second arrow is a question of \textit{approximation}: is the population IPM close to the population Wasserstein distance?
+
+We will see that the answers depend on the complexity of the generator class $\cF$.
+
+\section{What happens when $\cF$ is ``too complex''?}
+\begin{lemma}
+Suppose $\cF$ is the set of all $1$-Lipschitz functions.
+(Note this means that $\WF = W_1$.) Assume $n={\rm poly}(d)$.
+Then there exist distributions $P$ and $Q$ such that $W_1(P,Q) = \WF(P,Q) = 0$ (and therefore $P = Q$), but with high probability, $\WF(\hat{P}, \hat{Q}) \gtrsim 1$, where $\hat{P}$ and $\hat{Q}$ are uniform distributions over fixed sets of independent samples $u_1, \dots, u_n \sim P$ and $v_1, \dots, v_n \sim Q$.
+\end{lemma}
+This lemma implies an undesirable result: if $\cF$ is too rich, it is possible to learn the true distribution (in the sense that $P = Q$) without realizing it (in the sense that $\WF(\hat{P}, \hat{Q})$ is large).
+
+\begin{proof}[Proof of lemma]
+Let $V = \{\pm \frac{1}{\sqrt{d}}\}^d$ be the vertices of a hypercube in $d$-dimensions.
+Let $P$ be a uniform distribution over $V$, and $P = Q$.
+Then immediately
+\[\WF(P,Q) = W_1(P,Q) = 0\]
+Now let $\hat{P} = \operatorname{Uniform}\{u_1, \dots, u_n\}$ and $\hat{Q} = \operatorname{Uniform}\{v_1, \dots, v_n\}$ where $u_1, \dots, u_n, v_1, \dots, v_n$ are sampled independently from $P$.
+
+Our claim is that random vectors from $P$ have an inner product bounded like $\lesssim \frac{1}{\sqrt{d}}$.
+More precisely, if $u$ and $v$ are independent samples from $P$, then for every $c \ge 0$
+\[\P\left(|u\T v| \ge \sqrt{\frac{2c\log d}{d}}\right) \le 2d^{-c}\]
+\begin{proof}[Proof of claim]
+Write $u\T v = \sum_{i=1}^d u_iv_i$.
+Note that for each $u_i, v_i$, we have
+\[\E[u_i] = \frac{1}{2}\frac{1}{\sqrt{d}} + \frac{1}{2}\left(-\frac{1}{\sqrt{d}}\right) = 0\]
+and likewise for $v_i$.
+This implies that
+\[\E[u\T v] = \sum_{i=1}^d \E[u_iv_i] = \sum_{i=1}^d \E[u_i]\E[v_i] = 0\]
+where we have used the independence of $u_i$ and $v_i$ to factor the expectation.
+Moreover, since $u_iv_i \in [-\frac{1}{d}, \frac{1}{d}]$, we can apply Hoeffding's inequality to obtain
+\[\P(|u\T v| \ge t) = \P(|u\T v - \E[u\T v]| \ge t) \le 2\exp\left(-\frac{2t^2}{\sum_{i=1}^d \left(\frac{2}{d}\right)^2}\right) = 2\exp\left(-\frac{dt^2}{2}\right)\]
+for any $t \ge 0$.
+Taking $t = \sqrt{\frac{2c\log d}{d}}$, we obtain
+\[\P\left(|u\T v| \ge \sqrt{\frac{2c\log d}{d}}\right) \le 2\exp\left(-\frac{2dc\log d}{2d}\right) = 2d^{-c}\]
+as stated.
+\end{proof}
+By a union bound over all $n^2$ pairs $(u_i, v_j)$, it follows that
+\[\P\left(\forall i,j, ~ |u_i\T v_j| \le \sqrt{\frac{2c\log d}{d}}\right) \ge 1 - 2n^2d^{-c}\]
+% \GT{Where did the extra factor of $2$ come from?}
+for any $c \ge 0$.  Then if $n \le d^{O(1)}$ (polynomial sample
+complexity), we have with high probability that
+\[\forall i,j, ~ |u_i\T v_j| \le O\left(\sqrt{\frac{\log d}{d}}\right)\]
+which implies
+\[\|u_i-v_j\|_2^2 = \|u_i\|_2^2 + \|v_j\|_2^2 - 2u_i\T v_j \ge 2 - O\left(\sqrt{\frac{\log d}{d}}\right) \gtrsim 1\]
+Now let $\Gamma$ be a coupling of $\hat{P}$ and $\hat{Q}$.
+Then with high probability, $(x,y) \sim \Gamma$ satisfy $\|x-y\|_2 \gtrsim 1$, so
+\[\E_{(x,y) \sim \Gamma} \|x-y\|_2 \gtrsim 1\]
+Conditioned on $\|u_i - v_j\|_2^2 \gtrsim 1$ for all $i, j$ (which is a high probability event), for any $\Gamma$,
+\[\WF(\hat{P}, \hat{Q}) = W_1(\hat{P}, \hat{Q}) = \inf_\Gamma \E_{(x,y) \sim \Gamma} \|x-y\|_2 \gtrsim 1\]
+which proves the lemma.
+\end{proof}
+\section{What happens when $\cF$ is "too simple"?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Good generalization}
+\begin{theorem}(Heuristical) For any fixed $P,Q$, with high probability over the randomness of $\hat{P},\hat{Q}$, we have  $W_{\cF}(\hat{P},\hat{Q})-W_{\cF}(P,Q)\lesssim R_n(\cF)$
+\end{theorem}
+\begin{remark}
+This theorem is not enough, we need a theorem that is more uniform convergence, that is we have bounded difference for any fixed $P$ and any $Q$.
+\end{remark}
+\begin{definition}
+Let $G=\set{P_{\theta}}$ be all possible generated distributions, assume $0\in \cF$. For any $P\in G$, define 
+$$R_n(\cF,P)=\mathbb{E}_{z_1,...,z_n\sim P}[\mathbb{E}_{\sigma}[\frac{1}{n}\sup_{f\in\cF}\sum_{i=1}^n\sigma_if(z_i)]]$$
+and define 
+$$R_n(\cF,G)=\sup_{P\in G}R_n(\cF,P)$$
+\end{definition}
+\noindent Recall that over the randomness of training examples, we have $\forall \theta, \hat{L}(\theta)\approx L(\theta)$ thus we can apply something similar here by redefining the training error as $\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{P},\hat{Q})]$. More specifically, we introduce the following theorem.
+\begin{theorem}
+Assume that $\forall f\in \cF, ||f||_{\infty}\leq M$, then for fixed $P\in G$ with probability $\geq 1-\delta$, over the randomness of $\hat{P}$, $\forall Q\in G$, we have
+$$|W_{\cF}(P,Q)-\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{P},\hat{Q})]|\lesssim R_n(\cF,G)+M\sqrt{\frac{\log 2/\delta}{n}}$$
+\end{theorem}
+\begin{proof}
+$$W_{\cF}(P,Q)-\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{P},\hat{Q})]=\mathbb{E}_{\hat{Q}}[W_{\cF}(P,Q)-W_{\cF}(\hat{P},\hat{Q})]$$
+$$(\textit{triangle inequality })\leq\mathbb{E}_{\hat{Q}}[W_{\cF}(P,\hat{P})+W_{\cF}(\hat{P},\hat{Q})+W_{\cF}(\hat{Q},Q)-W_{\cF}(\hat{P},\hat{Q})]$$
+$$=\mathbb{E}_{\hat{Q}}[W_{\cF}(P,\hat{P})+W_{\cF}(\hat{Q},Q)]=W_{\cF}(P,\hat{P})+\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{Q},Q)]$$
+Thus we have
+\begin{equation}
+W_{\cF}(P,Q)-\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{P},\hat{Q})]\leq W_{\cF}(P,\hat{P})+\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{Q},Q)]
+\end{equation}
+We bound those two terms individually. By lemma 1 in lecture note 5:
+\begin{equation}
+\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{Q},Q)]=\mathbb{E}_{z_1,...,z_n\sim\hat{Q}}\Big[\sup_{f\in\cF}\big|\mathbb{E}_{z\sim Q}[f(z)]-\frac{1}{n}\sum_{i=1}^nf(z_i)\big|\Big]\leq R_n(\cF,Q)
+\end{equation}
+Also, by theorem 2 in lecture note 6, with probability $\geq 1-\delta$
+\begin{equation}
+W_{\cF}(P,\hat{P})\lesssim R_n(\cF,P)+M\sqrt{\frac{\log2/\delta}{n}}
+\end{equation}
+Then by (1),(2),(3) we have
+$$W_{\cF}(P,Q)-\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{P},\hat{Q})]\lesssim R_n(\cF,Q)+R_n(\cF,P)+M\sqrt{\frac{\log2/\delta}{n}}\lesssim R_n(\cF,G)+M\sqrt{\frac{\log2/\delta}{n}}$$
+Similarly, we can show that
+$$
+\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{P},\hat{Q})]-W_{\cF}(P,Q)\lesssim R_n(\cF,G)+M\sqrt{\frac{\log2/\delta}{n}}$$
+Thus
+$$|W_{\cF}(P,Q)-\mathbb{E}_{\hat{Q}}[W_{\cF}(\hat{P},\hat{Q})]|\lesssim R_n(\cF,G)+M\sqrt{\frac{\log2/\delta}{n}}$$
+\end{proof}
+\subsection{(Maybe) bad approximation}
+We introduce the following lemma regarding the approximation quality of $\cF$ with small complexity.
+\begin{lemma}
+Assume $P$ uniform over $\set{\pm\frac{1}{\sqrt{d}}}^d$, suppose $R_n(\cF,G)\leq\frac{c}{\sqrt{n}}$ for some constant $c$, then $\forall \epsilon>1/poly(d)$, there is $Q$ such that $W_{\cF}(P,Q)\leq\epsilon$ but $W_1(P,Q)\gtrsim 1$.
+\end{lemma}
+\begin{proof}
+Take $m\geq\frac{c}{\epsilon^2}$ and $Q=\hat{P}^m$ uniform over $\set{x_1,...,x_m}$ where each $x_i\sim P$. Then by (3), we have, if we pick some large enough $m$, ignoring the $M\sqrt{\frac{\log2/\delta}{m}}$ term, we have
+$$W_{\cF}(P,Q)=W_{\cF}(P,\hat{P})\leq R_m(\cF,Q)\leq\frac{c}{\sqrt{m}}\leq\epsilon$$
+We also have
+$$W_1(P,Q)=W_1(P,\hat{P}^m)=\inf_p\mathbb{E}_{(x,y)\sim p}[||x-y||_2]$$
+Since $\epsilon \ge 1/poly(d)$, we only require $m = poly(d)$. Furthermore, we note that $E_{x \sim P}[\|x - x_i\|_2^2] = 2$, and $\|x - x_i\|_2^2$ is the sum of $d$ independent random variables. Therefore, $\text{Pr}_{x \sim P}(\|x - x_i\|_2 \le 1)$ is exponentially small in $d$ (see Lemma~\ref{lemma:widespread} for a formal statement). Therefore, we can union bound over all $m = poly(d)$ choices of $i$ to get that 
+$$\text{Pr}_{x\sim P}(\forall i, ||x-x_i||_2\geq1)\geq\frac{1}{2}$$
+which gives that for any coupling $p$ of $P$ and $Q$,
+$$\text{Pr}_{x\sim P}(\text{Pr}_{y\sim p(y|x)}(||x-y||_2\geq1))\geq\frac{1}{2}$$
+Thus
+$$W_1(P,Q)=\inf_{p}\mathbb{E}_{(x,y)\sim p}[||x-y||_2]\geq\frac{1}{2}$$
+\end{proof}
+
+\subsubsection{Points are ``widespread'' in high dimension}
+
+\newcommand{\<}{\langle}
+\renewcommand{\>}{\rangle}
+
+\begin{lemma}
+  \label{lemma:widespread}
+  Let $x\sim{\rm Unif}(\set{\pm \frac{1}{\sqrt{d}}}^d)$ and $y$ be an arbitrary fixed vector in $\set{\pm \frac{1}{\sqrt{d}}}^d$. Then we have
+  \begin{equation*}
+    {\rm Pr}(\|x-y\|_2 \le 1) \le \exp(-d/8).
+  \end{equation*}
+\end{lemma}
+\begin{proof}
+  By the fact that $\|x-y\|_2^2=\|x\|_2^2+\|y\|_2^2-2\<x, y\>=2-2\<x, y\>$, we have
+  \begin{equation*}
+    {\rm Pr}(\|x-y\|_2 \le 1) = {\rm Pr}(\<x, y\> \ge 1/2).
+  \end{equation*}
+  Now, regardless of the value of $y$, each variable $x_iy_i$ is uniformly distributed in $\set{\pm \frac{1}{d}}$, and is thus mean-zero and sub-Gaussian with variance proxy $\frac{1}{d^2}$. As the coordinates are further independent, we get that $\<x,y\> = \sum_{i=1}^d x_iy_i$ is mean-zero with sub-Gaussian with variance proxy $1/d$. Applying the sub-Gaussian concentration, we get
+  \begin{equation*}
+    {\rm Pr}(\<x, y\> \ge 1/2) \le \exp\left( -\frac{(1/2)^2}{2\cdot 1/d} \right) = \exp(-d/8).
+  \end{equation*}
+\end{proof}
+\end{document}
